@@ -2,34 +2,48 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <math.h>
 #include "command.h"
 #include "20150514.h"
 #include "BasicCommand.h"
+inline bool isOverflowed(int address) {
+	if (address < 0 || address > 0xfffff) return true;
+	else return false;
+}
 
-void insert_queue(char instruction[MAX_COMMAND_SIZE]) {
+inline int toDecimal(char c) {
+	if ('0' <= c && c <= '9') return c - '0';
+	else if ('a' <= c && c <= 'z') return c - 'a' + 10;
+	else if ('A' <= c && c <= 'Z') return c - 'A' + 10;
+	else return -1;
+}
+void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 	if (head_of_command_queue == tail_of_command_queue) {
 		head_of_command_queue = (struct command_list*)malloc(sizeof(struct command_list));
-		int len = strlen(instruction);
+		size_t len = strlen(instruction);
 		head_of_command_queue->command = (char*)malloc(len*sizeof(char));
 		head_of_command_queue->next = NULL;
-		strncpy(head_of_command_queue, instruction, len);
+		strncpy(head_of_command_queue->command, instruction, len);
 		tail_of_command_queue = head_of_command_queue->next;
 
 	}
 	else {
 		tail_of_command_queue = (struct command_list*)malloc(sizeof(struct command_list));
-		int len = strlen(instruction);
+		size_t len = strlen(instruction);
 		tail_of_command_queue->command = (char*)malloc(len * sizeof(char));
 		tail_of_command_queue->next = NULL;
-		strncpy(tail_of_command_queue, instruction, len);
+		strncpy(tail_of_command_queue->command, instruction, len);
 		tail_of_command_queue = tail_of_command_queue->next;
 	}
 }
 
-void delete_queue() {
+void dumpMemory(int parameters[], int parsedNumber) {
+
+}
+void deleteHistory() {
 	command_list* temp = head_of_command_queue;
 	if (temp->next) {
 		temp = temp->next;
@@ -43,7 +57,7 @@ void delete_queue() {
 	}
 }
 
-void print_queue() {
+void showHistory() {
 	int count = 1;
 	command_list* temp = head_of_command_queue;
 	while (temp != tail_of_command_queue) {
@@ -53,14 +67,14 @@ void print_queue() {
 }
 
 
-void show_help() {
-	printf("h[elp]\nd[ir]\n\q[uit]\nhi[story]\n\
+void showHelp() {
+	printf("h[elp]\nd[ir]\nq[uit]\nhi[story]\n\
 du[mp][start, end]\ne[dit] address, value\nf[ill] start, end, value\n\
 reset\nopcode mnemonic\nopcodelist\n");
 
 }
 
-void show_dir() {
+void showDir() {
 	DIR* dp = NULL;
 	struct dirent* entry;
 	struct stat buf;
@@ -91,146 +105,335 @@ void show_dir() {
 	return;
 }
 
-bool operand_parsing(char insturction[MAX_COMMAND_SIZE], int command_number, int command_length) {
-	bool operand_parse_flag = true;
-	switch (command_number) {
+void resetMemory() {
+	memset(vMemory, 0, sizeof(vMemory));
+}
 
-	case dump:
-		break;
-
-	case edit:
-		break;
-
-	case fill:
-		break;
-
-
-	default:
-		operand_parse_flag = false;
-
-	}
-	return operand_parse_flag;
+void editMemory(int parameters[]) {
 
 }
 
-void reset_memory() {
-	;
+void fillMemory(int parameters[]) {
+
+}
+void showMnemonic(int parameters[]) {
+
 }
 
+void showOpcodelist() {
 
-void playCommand(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10]) {
+}
+void playCommand(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int parsedNumber) {
 	switch (current_command) {
 	case help:
-
+		showHelp();
 		break;
 
 	case dir:
+		showDir();
 		break;
 
 	case quit:
+		quit_flag = true;
 		break;
 
 	case history:
+		showHistory();
 		break;
 
 	case dump:
+		dumpMemory(parameters, parsedNumber);
 		break;
 
 	case edit:
+		editMemory(parameters);
 		break;
 
 	case fill:
+		fillMemory(parameters);
 		break;
 
 	case reset:
+		resetMemory();
 		break;
 
 	case opcode:
+		showMnemonic(parameters);
 		break;
 
 	case opcodelist:
+		showOpcodelist();
 		break;
 
 	}
 }
 
-bool isExecutable(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10]) {
+bool isExecutable(enum input_command current_command, 
+	char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference) {
+
 	bool ret = true;
+	int start = 0, last = 0, valueDecimal = 0, hexaDecimal = 0;
 	int parsedNumber = 0;
 	for (int i = 0; ; i++) {
 		if (!parsedInstruction[i]) break;
 		parsedNumber++;
 	}
-	switch (current_command) {
-	case dump:
-		int startAddress = 0;
-		int hexaDecimal = 0;
-		int lastIndex = strlen(parsedInstruction[1]) - 1;
+	if (current_command == dump) {
+		hexaDecimal = 0;
+		size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+
 		if (parsedNumber == 1) {
-			startAddress = lastAddress;
+			start = lastAddress;
 			lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
+			parameters[0] = start, parameters[1] = lastAddress, * parsedReference = parsedNumber;
+		}
+
+		else if (parsedNumber == 2) {
+			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
+			for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+				if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+					STDERR_MEMORY_CORRUPT();
+					ret = false;
+					break;
+				}
+				else {
+					start += (int)pow(16, (double)j) * hexaDecimal;
+				}
+			}
+			// hexa가 제대로 들어오긴 했을 때
+			if (ret) {
+				if (isOverflowed(start)) {
+					STDERR_MEMORY_CORRUPT();
+					ret = false;
+				}
+				else {
+					last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE;
+					lastAddress = last;
+				}
+			}
 
 		}
-		else if (parsedNumber == 2) {
+		else if (parsedNumber == 3) {
+			// 명령어가 세 부분으로 이루어 지면 두 번째 인자 마지막에 ','를 포함해야 한다.
+
 			if (parsedInstruction[1][lastIndex] == ',') {
-				for (int i = lastIndex - 1; i >= 0; i--) {
-					if ((hexaDecimal = hexa(parsedInstruction[1][i])) == WRONG_HEXA) {
+				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						STDERR_MEMORY_CORRUPT();
 						ret = false;
 						break;
 					}
 					else {
-						startAddress+=
+						start += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
+			}
+			else {
+				STDERR_COMMAND_ERROR();
+				ret = false;
+			}
+
+			if (ret) {
+				lastIndex = strlen(parsedInstruction[2]) - 1;
+				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						STDERR_MEMORY_CORRUPT();
+						ret = false;
+						break;
+					}
+					else {
+						last += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
+				if (ret) {
+					if (isOverflowed(start) || start > last) {
+						STDERR_MEMORY_CORRUPT();
+						ret = false;
+					}
+					else {
+						lastAddress = last;
+					}
+				}
+			}
+		}
+		// 명령어 파트가 더 많이 들어온 경우
+		else {
+			STDERR_COMMAND_ERROR();
+			ret = false;
+		}
+
+		// 최종 점검
+		if (ret) {
+			parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;
+		}
+	}
+	else if (current_command == edit) {
+		if (parsedNumber != 3) {
+			ret = false;
+		}
+		else {
+			hexaDecimal = 0;
+			size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
+			if (parsedInstruction[1][lastIndex] == ',') {
+				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						STDERR_MEMORY_CORRUPT();
+						ret = false;
+						break;
+					}
+					else {
+						start += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
+			}
+			else {
+				STDERR_COMMAND_ERROR();
+				ret = false;
+			}
+
+			if (ret) {
+				lastIndex = strlen(parsedInstruction[2]) - 1;
+				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						STDERR_MEMORY_CORRUPT();
+						ret = false;
+						break;
+					}
+					else {
+						valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
+				if (ret) {
+					if (isOverflowed(start)) {
+						STDERR_MEMORY_CORRUPT();
+						ret = false;
+					}
+					if (valueDecimal < 0 || valueDecimal > 0xff) {
+						STDERR_VALUE_ERROR();
+						ret = false;
+					}
+				}
+				if (ret) {
+					parameters[0] = start, parameters[1] = valueDecimal;
+				}
+			}
+		}
+
+	}
+
+	else if (current_command == fill) {
+		if (parsedNumber != 4) ret = false;
+		else {
+			int hexaDecimal = 0;
+			if (parsedNumber == 1) {
+				start = lastAddress;
+				lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
+
+			}
+			size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+			if (parsedInstruction[1][lastIndex] == ',') {
+				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						ret = false;
+						break;
+					}
+					else {
+						start += (int)pow(16, (double)j) * hexaDecimal;
 					}
 				}
 			}
 			else {
 				ret = false;
 			}
-		}
-		else if (parsedNumber == 3) {
-			if (parsedInstruction[1][lastIndex] == ',') {
-				parsedInstruction[1][lastIndex] = '\0';
-				
 
+			lastIndex = strlen(parsedInstruction[2]) - 1;
+			if (parsedInstruction[2][lastIndex] == ',') {
+				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						ret = false;
+						break;
+					}
+					else {
+						last += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
 			}
 			else {
 				ret = false;
 			}
+
+			if (ret) {
+				lastIndex = strlen(parsedInstruction[3]) - 1;
+				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+						ret = false;
+						break;
+					}
+					else {
+						valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
+					}
+				}
+			}
+			if (ret) {
+				if (isOverflowed(start) || isOverflowed(last) || start > last) {
+					STDERR_MEMORY_CORRUPT();
+					ret = false;
+				}
+				if (valueDecimal < 0 || valueDecimal > 0xff) {
+					STDERR_VALUE_ERROR();
+					ret = false;
+				}
+			}
+			if (ret) {
+				parameters[0] = start, parameters[1] = last, parameters[2] = valueDecimal;
+				
+			}
 		}
-		else {
-			ret = false;
-		}
-		break;
 
-	case edit:
-		if (parsedNumber == 3) {
-			if()
-		}
-		else ret = false;
-		break;
-
-	case fill:
-
-		break;
-
-	case opcode:
-
-		break;
-
-	default:
-		if (parsedNumber == 1) {
-			ret = false;
-		}
-		break;
 	}
+
+	else if (current_command == opcode) {
+		if (parsedNumber != 1) ret = false;
+
+		/*TODO///////////////////////////////////////////
+		//
+		//
+		//////////////////////////////////////////////////*/
+	}
+
+	else {
+		if (parsedNumber != 1) ret = false;
+		//else {
+		//	if (current_command == help) {
+
+		//	}
+		//	else if (current_command == dir) {
+
+		//	}
+		//	else if (current_command == quit) {
+
+		//	}
+		//	else if (current_command == history) {
+
+		//	}
+		//	else if (current_command == reset) {
+
+		//	}
+		//	else if (current_command == opcodelist) {
+
+		//	}
+		//}
+	}
+	*parsedReference = parsedNumber;
+	return ret;
 }
 
 bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 	char temp[MAX_COMMAND_SIZE];
 	
 	int parsed_length = 0;
-	bool history_flag = false;
-	bool success_flag = true;
+	
 
 	bool blank_buffer = false;
 	for (int i = 0; i < MAX_COMMAND_SIZE; i++) {
@@ -255,7 +458,9 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 	}
 	memcpy(instruction, temp, sizeof(temp));
 
-	int len = strlen(temp);
+
+
+	int len = (int)strlen(temp);
 	char parsedInstruction[MAX_PARSED_NUM][MAX_PARSED_NUM + 10] = { 0, };
 	int count = 0;
 	for (int i = 0, j = 0; i < len; i++) {
@@ -268,7 +473,7 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 			j = 0;
 		}
 	}
-	char* pInstruction = parsedInstruction;
+	char* pInstruction = &parsedInstruction[0][0];
 	if (!searchTrie(root, parsedInstruction[0])) {
 		return false;
 	}
@@ -311,73 +516,15 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 			current_command = opcodelist;
 		}
 	}
-	bool Executable = isExecutable(current_command, parsedInstruction);
+	int parsedNumber = 0;
+	bool Executable = isExecutable(current_command, parsedInstruction, &parsedNumber);
 	if (!Executable) {
 		return false;
 	}
 	else {
-		playCommand(current_command, parsedInstruction);
+		insertHistory(instruction);
+		playCommand(current_command, parsedInstruction, parsedNumber);
 		return true;
 	}
-	/*if (!strcmp(instruction, "h") || !strcmp(instruction, "help")) {
-
-		show_help();
-
-	}
-	else if (!strcmp(instruction, "d") || !strcmp(instruction, "dir")) {
-		show_dir();
-	}
-	else if (!strcmp(instruction, "q") || !strcmp(instruction, "quit")) {
-		quit_flag = true;
-	}
-	else if (!strcmp(instruction, "hi") || !strcmp(instruction, "history")) {
-		history_flag = true;
-		insert_queue(instruction);
-		print_queue();
-	}
-	else if (!strncmp(instruction, "du", 2) || !strncmp(instruction, "dump", 4)) {
-		if (operand_parsing(instruction, dump, 2) || operand_parsing(instruction, dump, 4)) {
-
-		}
-		else {
-			success_flag = false;
-		}
-	}
-	else if (!strncmp(instruction, "e", 1) || !strncmp(instruction, "edit", 4)) {
-		if (operand_parsing(instruction, edit, 1) || operand_parsing(instruction, edit, 4)) {
-
-		}
-		else {
-			success_flag = false;
-		}
-	}
-
-	else if (!strncmp(instruction, "f", 1) || !strncmp(instruction, "fill", 4)) {
-		if (operand_parsing(instruction, fill, 1) || operand_parsing(instruction, fill, 4)) {
-
-		}
-		else {
-			success_flag = false;
-		}
-	}
-	else if (!strcmp(instruction, "reset")) {
-		reset_memory();
-	}
-	else if (!strncmp(instruction, "opcode", 6)) {
-		if (operand_parsing(instruction, opcode, 6)) {
-
-		}
-	}
-	else if (!strcmp(instruction, "opcodelist")){
-
-	}
-	else {
-		success_flag = false;
-
-	}*/
-	if (success_flag) {
-		insert_queue(instruction);
-	}
-	return success_flag;
-
+	
 }
