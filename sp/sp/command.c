@@ -4,8 +4,10 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <math.h>
 #include "command.h"
 #include "20150514.h"
+#include "BasicCommand.h"
 
 void insert_queue(char instruction[MAX_COMMAND_SIZE]) {
 	if (head_of_command_queue == tail_of_command_queue) {
@@ -115,6 +117,114 @@ void reset_memory() {
 	;
 }
 
+
+void playCommand(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10]) {
+	switch (current_command) {
+	case help:
+
+		break;
+
+	case dir:
+		break;
+
+	case quit:
+		break;
+
+	case history:
+		break;
+
+	case dump:
+		break;
+
+	case edit:
+		break;
+
+	case fill:
+		break;
+
+	case reset:
+		break;
+
+	case opcode:
+		break;
+
+	case opcodelist:
+		break;
+
+	}
+}
+
+bool isExecutable(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10]) {
+	bool ret = true;
+	int parsedNumber = 0;
+	for (int i = 0; ; i++) {
+		if (!parsedInstruction[i]) break;
+		parsedNumber++;
+	}
+	switch (current_command) {
+	case dump:
+		int startAddress = 0;
+		int hexaDecimal = 0;
+		int lastIndex = strlen(parsedInstruction[1]) - 1;
+		if (parsedNumber == 1) {
+			startAddress = lastAddress;
+			lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
+
+		}
+		else if (parsedNumber == 2) {
+			if (parsedInstruction[1][lastIndex] == ',') {
+				for (int i = lastIndex - 1; i >= 0; i--) {
+					if ((hexaDecimal = hexa(parsedInstruction[1][i])) == WRONG_HEXA) {
+						ret = false;
+						break;
+					}
+					else {
+						startAddress+=
+					}
+				}
+			}
+			else {
+				ret = false;
+			}
+		}
+		else if (parsedNumber == 3) {
+			if (parsedInstruction[1][lastIndex] == ',') {
+				parsedInstruction[1][lastIndex] = '\0';
+				
+
+			}
+			else {
+				ret = false;
+			}
+		}
+		else {
+			ret = false;
+		}
+		break;
+
+	case edit:
+		if (parsedNumber == 3) {
+			if()
+		}
+		else ret = false;
+		break;
+
+	case fill:
+
+		break;
+
+	case opcode:
+
+		break;
+
+	default:
+		if (parsedNumber == 1) {
+			ret = false;
+		}
+		break;
+	}
+}
+
 bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 	char temp[MAX_COMMAND_SIZE];
 	
@@ -145,8 +255,71 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 	}
 	memcpy(instruction, temp, sizeof(temp));
 
-
-	if (!strcmp(instruction, "h") || !strcmp(instruction, "help")) {
+	int len = strlen(temp);
+	char parsedInstruction[MAX_PARSED_NUM][MAX_PARSED_NUM + 10] = { 0, };
+	int count = 0;
+	for (int i = 0, j = 0; i < len; i++) {
+		if (temp[i] != ' ') {
+			parsedInstruction[count][j] = temp[i];
+			j++;
+		}
+		else {
+			count++;
+			j = 0;
+		}
+	}
+	char* pInstruction = parsedInstruction;
+	if (!searchTrie(root, parsedInstruction[0])) {
+		return false;
+	}
+	else {
+		if (*pInstruction == 'h') {
+			if (*(pInstruction + 1) == 'e' || *(pInstruction + 1) == '\0') {
+				current_command = help;
+			}
+			else if (*(pInstruction + 1) == 'i') {
+				current_command = history;
+			}
+		}
+		else if (*pInstruction == 'd' && *(pInstruction + 1) == 'i') {
+			current_command = dir;
+		}
+		else if (*pInstruction == 'q' && *(pInstruction + 1) == 'u') {
+			current_command = quit;
+			quit_flag = true;
+		}
+		else if (*pInstruction == 'd' && *(pInstruction + 1) == 'u') {
+			current_command = dump;
+		}
+		else if (*pInstruction == 'e') {
+			if (*(pInstruction + 1) == 'd' || *(pInstruction + 1) == '\0') {
+				current_command = edit;
+			}
+		}
+		else if (*pInstruction == 'f') {
+			if (*(pInstruction + 1) == 'i' || *(pInstruction + 1) == '\0') {
+				current_command = fill;
+			}
+		}
+		else if (*pInstruction == 'r' && *(pInstruction + 1) == 'e') {
+			current_command = reset;
+		}
+		else if (!strcmp(parsedInstruction[0], "opcode")) {
+			current_command = opcode;
+		}
+		else if (!strcmp(parsedInstruction[0], "opcodelist")) {
+			current_command = opcodelist;
+		}
+	}
+	bool Executable = isExecutable(current_command, parsedInstruction);
+	if (!Executable) {
+		return false;
+	}
+	else {
+		playCommand(current_command, parsedInstruction);
+		return true;
+	}
+	/*if (!strcmp(instruction, "h") || !strcmp(instruction, "help")) {
 
 		show_help();
 
@@ -201,7 +374,7 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 	else {
 		success_flag = false;
 
-	}
+	}*/
 	if (success_flag) {
 		insert_queue(instruction);
 	}

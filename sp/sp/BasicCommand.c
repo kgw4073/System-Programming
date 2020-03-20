@@ -25,7 +25,7 @@ void deleteTrie(struct Trie* root) {
 	}
 }
 
-void insertTrie(Trie* root, const char* key) {
+void insertTrie(Trie* root, char* key) {
 	int length = strlen(key);
 	Trie* temp = root;
 	for (int i = 0; i < length; i++) {
@@ -37,7 +37,7 @@ void insertTrie(Trie* root, const char* key) {
 	}
 }
 
-bool searchTrie(Trie* root, const char* key) {
+bool searchTrie(Trie* root, char* key) {
 	int length = strlen(key);
 	Trie* temp = root;
 

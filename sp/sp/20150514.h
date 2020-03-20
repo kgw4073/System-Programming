@@ -15,5 +15,5 @@ extern bool quit_flag;
 struct dumped {
 	int last_address;
 };
-
+extern void init();
 #endif

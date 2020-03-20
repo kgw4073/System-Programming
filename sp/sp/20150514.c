@@ -2,9 +2,23 @@
 #include "command.h"
 #include "BasicCommand.h"
 bool quit_flag = false;
+Trie* root = NULL;
+
+void init() {
+	char basicInstruction[17][100] = {
+	"h", "help", "d", "dir", "q", "quit", "hi", "history", "du", "dump",
+	"e", "edit", "f", "fill", "reset", "opcode", "opcodelist"
+	};
+	for (int i = 0; i < 17; i++) {
+		insertTrie(root, basicInstruction[i]);
+	}
+}
 int main() {
+
 	head_of_command_queue = NULL;
 	tail_of_command_queue = head_of_command_queue;
+	init();
+
 	while (1) {
 		if (quit_flag) break;
 		printf("sicsim> ");
