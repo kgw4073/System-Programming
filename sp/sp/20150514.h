@@ -6,10 +6,15 @@
 #define bool int
 #define true 1
 #define false 0
-
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <math.h>
+
 
 char vMemory[MAX_MEMORY_CAPACITY];
 

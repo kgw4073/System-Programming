@@ -1,14 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <math.h>
+
+
 #include "command.h"
 #include "20150514.h"
 #include "BasicCommand.h"
+
+int parameters[3] = { 0, };
+int lastAddress = 0;
 inline bool isOverflowed(int address) {
 	if (address < 0 || address > 0xfffff) return true;
 	else return false;
@@ -21,22 +18,22 @@ inline int toDecimal(char c) {
 	else return -1;
 }
 void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
+	command_list* new_list_node = (command_list*)malloc(sizeof(command_list));
+
 	if (head_of_command_queue == tail_of_command_queue) {
-		head_of_command_queue = (struct command_list*)malloc(sizeof(struct command_list));
-		size_t len = strlen(instruction);
+		int len = strlen(instruction);
 		head_of_command_queue->command = (char*)malloc(len*sizeof(char));
-		head_of_command_queue->next = NULL;
 		strncpy(head_of_command_queue->command, instruction, len);
-		tail_of_command_queue = head_of_command_queue->next;
+		head_of_command_queue->next = new_list_node;
+		tail_of_command_queue = new_list_node;
 
 	}
 	else {
-		tail_of_command_queue = (struct command_list*)malloc(sizeof(struct command_list));
-		size_t len = strlen(instruction);
+		int len = strlen(instruction);
 		tail_of_command_queue->command = (char*)malloc(len * sizeof(char));
-		tail_of_command_queue->next = NULL;
 		strncpy(tail_of_command_queue->command, instruction, len);
-		tail_of_command_queue = tail_of_command_queue->next;
+		tail_of_command_queue->next = new_list_node;
+		tail_of_command_queue = new_list_node;
 	}
 }
 
@@ -63,6 +60,7 @@ void showHistory() {
 	while (temp != tail_of_command_queue) {
 		printf("%-4d ", count++);
 		printf("%s\n", temp->command);
+		temp = temp->next;
 	}
 }
 
@@ -73,7 +71,6 @@ du[mp][start, end]\ne[dit] address, value\nf[ill] start, end, value\n\
 reset\nopcode mnemonic\nopcodelist\n");
 
 }
-
 void showDir() {
 	DIR* dp = NULL;
 	struct dirent* entry;
@@ -175,12 +172,12 @@ bool isExecutable(enum input_command current_command,
 	int start = 0, last = 0, valueDecimal = 0, hexaDecimal = 0;
 	int parsedNumber = 0;
 	for (int i = 0; ; i++) {
-		if (!parsedInstruction[i]) break;
+		if (!parsedInstruction[i][0]) break;
 		parsedNumber++;
 	}
 	if (current_command == dump) {
 		hexaDecimal = 0;
-		size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+		int lastIndex = strlen(parsedInstruction[1]) - 1;
 
 		if (parsedNumber == 1) {
 			start = lastAddress;
@@ -190,7 +187,7 @@ bool isExecutable(enum input_command current_command,
 
 		else if (parsedNumber == 2) {
 			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
-			for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+			for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
 					STDERR_MEMORY_CORRUPT();
 					ret = false;
@@ -217,7 +214,7 @@ bool isExecutable(enum input_command current_command,
 			// 명령어가 세 부분으로 이루어 지면 두 번째 인자 마지막에 ','를 포함해야 한다.
 
 			if (parsedInstruction[1][lastIndex] == ',') {
-				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
 						STDERR_MEMORY_CORRUPT();
 						ret = false;
@@ -235,8 +232,8 @@ bool isExecutable(enum input_command current_command,
 
 			if (ret) {
 				lastIndex = strlen(parsedInstruction[2]) - 1;
-				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
 						STDERR_MEMORY_CORRUPT();
 						ret = false;
 						break;
@@ -246,7 +243,7 @@ bool isExecutable(enum input_command current_command,
 					}
 				}
 				if (ret) {
-					if (isOverflowed(start) || start > last) {
+					if (isOverflowed(start) || isOverflowed(last) || start > last) {
 						STDERR_MEMORY_CORRUPT();
 						ret = false;
 					}
@@ -273,10 +270,10 @@ bool isExecutable(enum input_command current_command,
 		}
 		else {
 			hexaDecimal = 0;
-			size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+			int lastIndex = strlen(parsedInstruction[1]) - 1;
 			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
 			if (parsedInstruction[1][lastIndex] == ',') {
-				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
 						STDERR_MEMORY_CORRUPT();
 						ret = false;
@@ -294,8 +291,8 @@ bool isExecutable(enum input_command current_command,
 
 			if (ret) {
 				lastIndex = strlen(parsedInstruction[2]) - 1;
-				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
 						STDERR_MEMORY_CORRUPT();
 						ret = false;
 						break;
@@ -331,9 +328,9 @@ bool isExecutable(enum input_command current_command,
 				lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
 
 			}
-			size_t lastIndex = strlen(parsedInstruction[1]) - 1;
+			int lastIndex = strlen(parsedInstruction[1]) - 1;
 			if (parsedInstruction[1][lastIndex] == ',') {
-				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
 						ret = false;
 						break;
@@ -349,8 +346,8 @@ bool isExecutable(enum input_command current_command,
 
 			lastIndex = strlen(parsedInstruction[2]) - 1;
 			if (parsedInstruction[2][lastIndex] == ',') {
-				for (size_t i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
 						ret = false;
 						break;
 					}
@@ -365,8 +362,8 @@ bool isExecutable(enum input_command current_command,
 
 			if (ret) {
 				lastIndex = strlen(parsedInstruction[3]) - 1;
-				for (size_t i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
+				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+					if ((hexaDecimal = toDecimal(parsedInstruction[3][i])) == WRONG_HEXA) {
 						ret = false;
 						break;
 					}
@@ -443,7 +440,7 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 				temp[parsed_length++] = instruction[i];
 			}
 		}
-		else if (instruction[i] == '\n') {
+		else if (instruction[i] == '\0') {
 			temp[parsed_length] = '\0';
 			break;
 		}
@@ -461,7 +458,8 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 
 
 	int len = (int)strlen(temp);
-	char parsedInstruction[MAX_PARSED_NUM][MAX_PARSED_NUM + 10] = { 0, };
+	char parsedInstruction[MAX_PARSED_NUM][MAX_PARSED_NUM + 10];
+	memset(parsedInstruction, 0, sizeof(parsedInstruction));
 	int count = 0;
 	for (int i = 0, j = 0; i < len; i++) {
 		if (temp[i] != ' ') {
@@ -486,16 +484,19 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 				current_command = history;
 			}
 		}
-		else if (*pInstruction == 'd' && *(pInstruction + 1) == 'i') {
-			current_command = dir;
+		else if (*pInstruction == 'd') {
+			if (*(pInstruction + 1) == 'i' || *(pInstruction + 1) == '\0') {
+				current_command = dir;
+			}
+			if (*(pInstruction + 1) == 'u') {
+				current_command = dump;
+			}
 		}
 		else if (*pInstruction == 'q' && *(pInstruction + 1) == 'u') {
 			current_command = quit;
 			quit_flag = true;
 		}
-		else if (*pInstruction == 'd' && *(pInstruction + 1) == 'u') {
-			current_command = dump;
-		}
+
 		else if (*pInstruction == 'e') {
 			if (*(pInstruction + 1) == 'd' || *(pInstruction + 1) == '\0') {
 				current_command = edit;

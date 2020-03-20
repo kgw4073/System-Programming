@@ -1,6 +1,7 @@
 #include "20150514.h"
 #include "command.h"
 #include "BasicCommand.h"
+
 bool quit_flag = false;
 Trie* root = NULL;
 
@@ -9,14 +10,17 @@ void init() {
 	"h", "help", "d", "dir", "q", "quit", "hi", "history", "du", "dump",
 	"e", "edit", "f", "fill", "reset", "opcode", "opcodelist"
 	};
+	root = getNewTrieNode();
 	for (int i = 0; i < 17; i++) {
 		insertTrie(root, basicInstruction[i]);
 	}
+
+	head_of_command_queue = (command_list*)malloc(sizeof(command_list));
+	tail_of_command_queue = head_of_command_queue;
 }
 int main() {
 
-	head_of_command_queue = NULL;
-	tail_of_command_queue = head_of_command_queue;
+
 	init();
 
 	while (1) {

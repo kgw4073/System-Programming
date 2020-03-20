@@ -1,6 +1,15 @@
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <dirent.h>
+//#include <sys/types.h>
+//#include <sys/stat.h>
+//#include <unistd.h>
+//#include <math.h>
 #include "command.h"
 #include "20150514.h"
 #include "BasicCommand.h"
+
 #define CTOI(x) ((int)x-(int)'a')
 
 Trie* getNewTrieNode() {
@@ -26,22 +35,23 @@ void deleteTrie(struct Trie* root) {
 }
 
 void insertTrie(Trie* root, char* key) {
-	int length = strlen(key);
+	size_t length = strlen(key);
 	Trie* temp = root;
-	for (int i = 0; i < length; i++) {
+	for (size_t i = 0; i < length; i++) {
 		int next = CTOI(key[i]);
 		if (!temp->child[next]) {
 			temp->child[next] = getNewTrieNode();
 		}
 		temp = temp->child[next];
 	}
+	temp->terminal = true;
 }
 
 bool searchTrie(Trie* root, char* key) {
-	int length = strlen(key);
+	size_t length = strlen(key);
 	Trie* temp = root;
 
-	for (int i = 0; i < length; i++) {
+	for (size_t i = 0; i < length; i++) {
 		int next = CTOI(key[i]);
 		if (!temp->child[next]) {
 			return false;
