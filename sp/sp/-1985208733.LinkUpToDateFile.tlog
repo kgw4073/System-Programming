@@ -1,0 +1,1 @@
+g++ -o "/sogang/under/cse20150514/projects/20150514/bin/x64/Debug/20150514.out" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack /sogang/under/cse20150514/projects/20150514/../sp/20150514.o
