@@ -100,6 +100,9 @@
     <ClInclude Include="BasicCommand.h" />
     <ClInclude Include="command.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="opcode.txt" />
+  </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
