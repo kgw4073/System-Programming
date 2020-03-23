@@ -14,7 +14,11 @@ void init() {
 	for (int i = 0; i < 17; i++) {
 		insertTrie(root, basicInstruction[i]);
 	}
-
+	unsigned char temp[MAX_MEMORY_LINE * MAX_BYTES_LINE];
+	for (int i = 0; i < MAX_MEMORY_LINE * MAX_BYTES_LINE; i++) {
+		temp[i] = (unsigned char)(rand() % 256);
+	}
+	memcpy(vMemory, temp, sizeof(vMemory));
 	head_of_command_queue = (command_list*)malloc(sizeof(command_list));
 	tail_of_command_queue = head_of_command_queue;
 }
