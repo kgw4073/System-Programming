@@ -1,4 +1,4 @@
-#ifndef _COMMAND_H
+ï»¿#ifndef _COMMAND_H
 #define _COMMAND_H
 #include "20150514.h"
 #define MAX_ALPHA 26
@@ -6,13 +6,18 @@
 #define MAX_DUMP_BYTE 16
 #define MAX_DUMP_LINE 10
 #define WRONG_HEXA -1
-#define STDERR_MEMORY_CORRUPT(); { fprintf(stderr, "Memory corrupted! Á¤»óÀûÀÎ ¹üÀ§¸¦ ÀÔ·ÂÇÏ¼¼¿ä (0x00000~0xfffff)\n");}
-#define STDERR_VALUE_ERROR(); {	fprintf(stderr, "Value error! Á¤»óÀûÀÎ °ªÀ» ÀÔ·ÂÇÏ¼¼¿ä (0x00 ~ 0xff)\n"); }
-#define STDERR_COMMAND_ERROR(); { fprintf(stderr, "Command error! Á¤»óÀûÀÎ ¸í·É¾î¸¦ ÀÔ·ÂÇÏ¼¼¿ä. h[elp] \n"); }
+#define STDERR_ADDRESS_ERROR(); { fprintf(stderr, "ì •ìƒì ì¸ ì£¼ì†Œë¥¼ ì…ë ¥í•˜ì„¸ìš” (0x00000 ~ 0xFFFFF)\n");}
+#define STDERR_MEMORY_CORRUPT(); { fprintf(stderr, "Memory Corruption! ì •ìƒì ì¸ ë²”ìœ„ë¥¼ ì…ë ¥í•˜ì„¸ìš” (0x00000 ~ 0xFFFFF)\n"); }
+#define STDERR_VALUE_ERROR(); {	fprintf(stderr, "Value error! ì •ìƒì ì¸ ê°’ì„ ì…ë ¥í•˜ì„¸ìš” (0x00 ~ 0xff)\n"); }
+#define STDERR_COMMAND_ERROR(); { fprintf(stderr, "Command error! ì •ìƒì ì¸ ëª…ë ¹ì–´ë¥¼ ì…ë ¥í•˜ì„¸ìš”. h[elp] \n"); }
+#define STDERR_OPCODE_ERROR(); { fprintf(stderr, "Operation Code error! ì •ìƒì ì¸ ëª…ë ¹ì–´ë¥¼ ì…ë ¥í•˜ì„¸ìš” \n"); }
 extern int parameters[3];
 
-typedef struct command_list {
+typedef enum {
+	NORMAL, ADDRESS_INPUT_ERROR, MEMORY_INDEX_ERROR, VALUE_ERROR, COMMAND_ERROR, OPCODE_ERROR
+} RETURN_CODE;
 
+typedef struct command_list {
 	char* command;
 	struct command_list* next;
 
@@ -28,7 +33,7 @@ extern int lastAddress;
 int current_command;
 command_list* head_of_command_queue, *tail_of_command_queue;
 
-
+extern void commandParse(char instruction[MAX_COMMAND_SIZE]);
 extern void insertHistory(char instruction[MAX_COMMAND_SIZE]);
 extern void deleteHistory();
 extern void showHistory();
@@ -43,12 +48,9 @@ extern void editMemory(int parameters[]);
 extern void fillMemory(int parameters[]);
 extern void showMnemonic(int parameters[]);
 
-extern bool command_parsing(char instruction[MAX_COMMAND_SIZE]);
-
+extern RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference);
 extern bool isOverflowed(int address);
 extern void lstat(const char*, struct stat*);
 extern int toDecimal(char c);
-
-extern bool isExecutable(enum input_command current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedNum);
 
 #endif
