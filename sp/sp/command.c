@@ -1,4 +1,11 @@
-
+ï»¿#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <math.h>
 #include "command.h"
 #include "20150514.h"
 #include "BasicCommand.h"
@@ -14,7 +21,7 @@ inline int toDecimal(char c) {
 	if ('0' <= c && c <= '9') return c - '0';
 	else if ('a' <= c && c <= 'z') return c - 'a' + 10;
 	else if ('A' <= c && c <= 'Z') return c - 'A' + 10;
-	else return -1;
+	else return WRONG_HEXA;
 }
 void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 	command_list* new_list_node = (command_list*)malloc(sizeof(command_list));
@@ -138,12 +145,46 @@ void fillMemory(int parameters[]) {
 		vMemory[inch] = parameters[2];
 	}
 }
+OpNode* findOpCodeNode(int OpCodeDecimal) {
+	int hashEntry = OpCodeDecimal % MAX_HASH_SIZE;
+	OpNode* search = hashTable[hashEntry];
+	while (1) {
+		if (search == NULL) return NULL;
+		if (search->decimal == OpCodeDecimal) {
+			return search;
+		}
+		search = search->next;
+	}
+	return NULL;
+}
 void showMnemonic(int parameters[]) {
-
+	int OpCodeDecimal = parameters[0];
+	OpNode* show;
+	if ((show = findOpCodeNode(OpCodeDecimal)) != NULL) {
+		printf("opcode is %02X\n", show->value);
+	}
 }
 
 void showOpcodelist() {
-
+	for (int i = 0; i < MAX_HASH_SIZE; i++) {
+		printf("%d : ", i);
+		OpNode* inch = hashTable[i];
+		if (inch == hashTailPointer[i]) {
+			printf("\n");
+			continue;
+		}
+		printf("[%s,%02X] ", inch->code, inch->value);
+		inch = inch->next;
+		while (1) {
+			if (inch == hashTailPointer[i]) {
+				printf("\n");
+				break;
+			}
+			printf("-> ");
+			printf("[%s,%02X] ", inch->code, inch->value);
+			inch = inch->next;
+		}
+	}
 }
 void playCommand(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int parsedNumber) {
 	switch (current_command) {
@@ -190,10 +231,10 @@ void playCommand(int current_command, char parsedInstruction[][MAX_PARSED_NUM + 
 	}
 }
 
-bool isExecutable(enum input_command current_command, 
+RETURN_CODE isExecutable(enum input_command current_command, 
 	char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference) {
 
-	bool ret = true;
+	//RETURN_CODE ret = NORMAL;
 	int start = 0, last = 0, valueDecimal = 0, hexaDecimal = 0;
 	int parsedNumber = 0;
 	for (int i = 0; ; i++) {
@@ -212,39 +253,34 @@ bool isExecutable(enum input_command current_command,
 		}
 
 		else if (parsedNumber == 2) {
-			// ÀÎÀÚ°¡ µÎ °³ÀÌ°Å³ª ´õ ÀÌ»ó ÆÄ½ÌÇÒ ÇÊ¿ä°¡ ¾øÀ» °æ¿ì
+			// ì¸ìžê°€ ë‘ ê°œì´ê±°ë‚˜ ë” ì´ìƒ íŒŒì‹±í•  í•„ìš”ê°€ ì—†ì„ ê²½ìš°
 			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
-					STDERR_MEMORY_CORRUPT();
-					ret = false;
-					break;
+					return ADDRESS_INPUT_ERROR;
 				}
 				else {
 					start += (int)pow(16, (double)j) * hexaDecimal;
 				}
 			}
-			// hexa°¡ Á¦´ë·Î µé¾î¿À±ä ÇßÀ» ¶§
-			if (ret) {
-				if (isOverflowed(start)) {
-					STDERR_MEMORY_CORRUPT();
-					ret = false;
-				}
-				else {
-					last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1;
-					lastAddress = last;
-				}
+			// hexaê°€ ì œëŒ€ë¡œ ë“¤ì–´ì˜¤ê¸´ í–ˆì„ ë•Œ
+			if (isOverflowed(start)) {
+				return MEMORY_INDEX_ERROR;
 			}
+			else {
+				last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1;
+				lastAddress = last;
+			}
+
 
 		}
 		else if (parsedNumber == 3) {
-			// ¸í·É¾î°¡ ¼¼ ºÎºÐÀ¸·Î ÀÌ·ç¾î Áö¸é µÎ ¹øÂ° ÀÎÀÚ ¸¶Áö¸·¿¡ ','¸¦ Æ÷ÇÔÇØ¾ß ÇÑ´Ù.
+			// ëª…ë ¹ì–´ê°€ ì„¸ ë¶€ë¶„ìœ¼ë¡œ ì´ë£¨ì–´ ì§€ë©´ ë‘ ë²ˆì§¸ ì¸ìž ë§ˆì§€ë§‰ì— ','ë¥¼ í¬í•¨í•´ì•¼ í•œë‹¤.
 
 			if (parsedInstruction[1][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-						break;
+						return ADDRESS_INPUT_ERROR;
+					
 					}
 					else {
 						start += (int)pow(16, (double)j) * hexaDecimal;
@@ -252,58 +288,46 @@ bool isExecutable(enum input_command current_command,
 				}
 			}
 			else {
-				STDERR_COMMAND_ERROR();
-				ret = false;
+				return COMMAND_ERROR;
 			}
 
-			if (ret) {
-				lastIndex = strlen(parsedInstruction[2]) - 1;
-				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-						break;
-					}
-					else {
-						last += (int)pow(16, (double)j) * hexaDecimal;
-					}
+			lastIndex = strlen(parsedInstruction[2]) - 1;
+			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+				if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
+						
+					return ADDRESS_INPUT_ERROR;
 				}
-				if (ret) {
-					if (isOverflowed(start) || isOverflowed(last) || start > last) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-					}
-					else {
-						lastAddress = last;
-					}
+				else {
+					last += (int)pow(16, (double)j) * hexaDecimal;
 				}
 			}
+			if (isOverflowed(start) || isOverflowed(last) || start > last) {
+				return MEMORY_INDEX_ERROR;
+			}
+			else {
+				lastAddress = last;
+			}
 		}
-		// ¸í·É¾î ÆÄÆ®°¡ ´õ ¸¹ÀÌ µé¾î¿Â °æ¿ì
+		// ëª…ë ¹ì–´ íŒŒíŠ¸ê°€ ë” ë§Žì´ ë“¤ì–´ì˜¨ ê²½ìš°
 		else {
-			STDERR_COMMAND_ERROR();
-			ret = false;
+			return COMMAND_ERROR;
 		}
 
-		// ÃÖÁ¾ Á¡°Ë
-		if (ret) {
-			parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;
-		}
+		parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;
+		
 	}
 	else if (current_command == edit) {
 		if (parsedNumber != 3) {
-			ret = false;
+			return COMMAND_ERROR;
 		}
 		else {
 			hexaDecimal = 0;
 			int lastIndex = strlen(parsedInstruction[1]) - 1;
-			// ÀÎÀÚ°¡ µÎ °³ÀÌ°Å³ª ´õ ÀÌ»ó ÆÄ½ÌÇÒ ÇÊ¿ä°¡ ¾øÀ» °æ¿ì
+			// ì¸ìžê°€ ë‘ ê°œì´ê±°ë‚˜ ë” ì´ìƒ íŒŒì‹±í•  í•„ìš”ê°€ ì—†ì„ ê²½ìš°
 			if (parsedInstruction[1][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-						break;
+						return ADDRESS_INPUT_ERROR;
 					}
 					else {
 						start += (int)pow(16, (double)j) * hexaDecimal;
@@ -311,42 +335,36 @@ bool isExecutable(enum input_command current_command,
 				}
 			}
 			else {
-				STDERR_COMMAND_ERROR();
-				ret = false;
+				
+				return COMMAND_ERROR;
 			}
 
-			if (ret) {
-				lastIndex = strlen(parsedInstruction[2]) - 1;
-				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-						break;
-					}
-					else {
-						valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
-					}
+			lastIndex = strlen(parsedInstruction[2]) - 1;
+			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+				if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
+					return ADDRESS_INPUT_ERROR;
 				}
-				if (ret) {
-					if (isOverflowed(start)) {
-						STDERR_MEMORY_CORRUPT();
-						ret = false;
-					}
-					if (valueDecimal < 0 || valueDecimal > 0xff) {
-						STDERR_VALUE_ERROR();
-						ret = false;
-					}
-				}
-				if (ret) {
-					parameters[0] = start, parameters[1] = valueDecimal;
+				else {
+					valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
 				}
 			}
+			if (isOverflowed(start)) {
+				return MEMORY_INDEX_ERROR;
+			}
+			if (valueDecimal < 0 || valueDecimal > 0xff) {
+				return VALUE_ERROR;
+			}
+				
+			parameters[0] = start, parameters[1] = valueDecimal;
+
 		}
 
 	}
 
 	else if (current_command == fill) {
-		if (parsedNumber != 4) ret = false;
+		if (parsedNumber != 4) {
+			return COMMAND_ERROR;
+		}
 		else {
 			int hexaDecimal = 0;
 			if (parsedNumber == 1) {
@@ -358,8 +376,7 @@ bool isExecutable(enum input_command current_command,
 			if (parsedInstruction[1][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
-						ret = false;
-						break;
+						return ADDRESS_INPUT_ERROR;
 					}
 					else {
 						start += (int)pow(16, (double)j) * hexaDecimal;
@@ -367,15 +384,15 @@ bool isExecutable(enum input_command current_command,
 				}
 			}
 			else {
-				ret = false;
+				return COMMAND_ERROR;
 			}
 
 			lastIndex = strlen(parsedInstruction[2]) - 1;
 			if (parsedInstruction[2][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
-						ret = false;
-						break;
+						return ADDRESS_INPUT_ERROR;
+						
 					}
 					else {
 						last += (int)pow(16, (double)j) * hexaDecimal;
@@ -383,78 +400,63 @@ bool isExecutable(enum input_command current_command,
 				}
 			}
 			else {
-				ret = false;
+				return COMMAND_ERROR;
 			}
 
-			if (ret) {
-				lastIndex = strlen(parsedInstruction[3]) - 1;
-				for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
-					if ((hexaDecimal = toDecimal(parsedInstruction[3][i])) == WRONG_HEXA) {
-						ret = false;
-						break;
-					}
-					else {
-						valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
-					}
+			lastIndex = strlen(parsedInstruction[3]) - 1;
+			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
+				if ((hexaDecimal = toDecimal(parsedInstruction[3][i])) == WRONG_HEXA) {
+					return ADDRESS_INPUT_ERROR;
+						
+				}
+				else {
+					valueDecimal += (int)pow(16, (double)j) * hexaDecimal;
 				}
 			}
-			if (ret) {
-				if (isOverflowed(start) || isOverflowed(last) || start > last) {
-					STDERR_MEMORY_CORRUPT();
-					ret = false;
-				}
-				if (valueDecimal < 0 || valueDecimal > 0xff) {
-					STDERR_VALUE_ERROR();
-					ret = false;
-				}
+			if (isOverflowed(start) || isOverflowed(last) || start > last) {
+				return MEMORY_INDEX_ERROR;
 			}
-			if (ret) {
-				parameters[0] = start, parameters[1] = last, parameters[2] = valueDecimal;
-				
+			if (valueDecimal < 0 || valueDecimal > 0xff) {
+				return VALUE_ERROR;
 			}
+			
+			parameters[0] = start, parameters[1] = last, parameters[2] = valueDecimal;
+			
 		}
 
 	}
 
 	else if (current_command == opcode) {
-		if (parsedNumber != 1) ret = false;
+		if (parsedNumber != 2) return false;
+		int len = (int)strlen(parsedInstruction[1]);
+		int base = 1;
+		int OpCodeDecimal = 0;
+		for (int i = 0; i < len; i++) {
+			int decimal = parsedInstruction[1][i] - 'A';
+			if (decimal >= 0 && decimal <= 26) {
+				OpCodeDecimal += (decimal * base);
+				base *= 26;
+			}
+			else {
+				return OPCODE_ERROR;
+			}
+		}
+		
+		parameters[0] = OpCodeDecimal;
+		return NORMAL;
 
-		/*TODO///////////////////////////////////////////
-		//
-		//
-		//////////////////////////////////////////////////*/
 	}
 
 	else {
-		if (parsedNumber != 1) ret = false;
-		//else {
-		//	if (current_command == help) {
-
-		//	}
-		//	else if (current_command == dir) {
-
-		//	}
-		//	else if (current_command == quit) {
-
-		//	}
-		//	else if (current_command == history) {
-
-		//	}
-		//	else if (current_command == reset) {
-
-		//	}
-		//	else if (current_command == opcodelist) {
-
-		//	}
-		//}
+		if (parsedNumber != 1) return COMMAND_ERROR;
 	}
 	*parsedReference = parsedNumber;
-	return ret;
+	return NORMAL;
 }
 
-bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
+void commandParse(char instruction[MAX_COMMAND_SIZE]) {
 	char temp[MAX_COMMAND_SIZE];
-	
+	RETURN_CODE ret;
 	int parsed_length = 0;
 	
 
@@ -498,8 +500,10 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 		}
 	}
 	char* pInstruction = &parsedInstruction[0][0];
+
 	if (!searchTrie(root, parsedInstruction[0])) {
-		return false;
+		ret = COMMAND_ERROR;
+		goto ERROR_HANDLING;
 	}
 	else {
 		if (*pInstruction == 'h') {
@@ -510,6 +514,7 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 				current_command = history;
 			}
 		}
+
 		else if (*pInstruction == 'd') {
 			if (*(pInstruction + 1) == 'i' || *(pInstruction + 1) == '\0') {
 				current_command = dir;
@@ -518,6 +523,7 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 				current_command = dump;
 			}
 		}
+
 		else if (*pInstruction == 'q' && *(pInstruction + 1) == 'u') {
 			current_command = quit;
 			quit_flag = true;
@@ -533,25 +539,48 @@ bool command_parsing(char instruction[MAX_COMMAND_SIZE]) {
 				current_command = fill;
 			}
 		}
+
 		else if (*pInstruction == 'r' && *(pInstruction + 1) == 'e') {
 			current_command = reset;
 		}
+
 		else if (!strcmp(parsedInstruction[0], "opcode")) {
 			current_command = opcode;
 		}
+
 		else if (!strcmp(parsedInstruction[0], "opcodelist")) {
 			current_command = opcodelist;
 		}
 	}
 	int parsedNumber = 0;
-	bool Executable = isExecutable(current_command, parsedInstruction, &parsedNumber);
-	if (!Executable) {
-		return false;
-	}
-	else {
+	ret = isExecutable(current_command, parsedInstruction, &parsedNumber);
+
+
+ERROR_HANDLING:
+	switch (ret) {
+	case NORMAL:
 		insertHistory(instruction);
 		playCommand(current_command, parsedInstruction, parsedNumber);
-		return true;
+		break;
+
+	case ADDRESS_INPUT_ERROR:
+		STDERR_ADDRESS_ERROR();
+		break;
+
+	case MEMORY_INDEX_ERROR:
+		STDERR_MEMORY_CORRUPT();
+		break;
+
+	case VALUE_ERROR:
+		STDERR_VALUE_ERROR();
+		break;
+
+	case COMMAND_ERROR:
+		STDERR_COMMAND_ERROR();
+		break;
+
+	case OPCODE_ERROR:
+		STDERR_OPCODE_ERROR();
+		break;
 	}
-	
 }
