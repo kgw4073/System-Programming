@@ -2,7 +2,8 @@
 #ifndef _MAIN_HEADER_H
 #define _MAIN_HEADER_H
 #define MAX_COMMAND_SIZE 256
-#define MAX_MEMORY_CAPACITY (1 << 20)
+#define MAX_MEMORY_LINE (1 << 16)
+#define MAX_BYTES_LINE (1 << 4)
 #define bool int
 #define true 1
 #define false 0
@@ -16,7 +17,7 @@
 #include <math.h>
 
 
-char vMemory[MAX_MEMORY_CAPACITY];
+unsigned char vMemory[MAX_MEMORY_LINE * MAX_BYTES_LINE];
 
 extern bool quit_flag;
 struct dumped {

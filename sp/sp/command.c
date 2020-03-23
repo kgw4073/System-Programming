@@ -1,11 +1,10 @@
 
-
 #include "command.h"
 #include "20150514.h"
 #include "BasicCommand.h"
 
 int parameters[3] = { 0, };
-int lastAddress = 0;
+int lastAddress = -1;
 inline bool isOverflowed(int address) {
 	if (address < 0 || address > 0xfffff) return true;
 	else return false;
@@ -38,6 +37,29 @@ void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 }
 
 void dumpMemory(int parameters[], int parsedNumber) {
+	int start = (parameters[0] / 16) * 16;
+	int end = (parameters[1] / 16) * 16 + 16;
+	for (int i = start; i < end; i++) {
+		if (i % 16 == 0) {
+			printf("%05X ", i);
+		}
+		if (i >= parameters[0] && i <= parameters[1]) {
+			printf("%02X ", vMemory[i]);
+		}
+		else {
+			printf("   ");
+		}
+		if (i % 16 == 15) {
+			printf("; ");
+			for (int k = i / MAX_BYTES_LINE * MAX_BYTES_LINE; k < (i / MAX_BYTES_LINE + 1) * MAX_BYTES_LINE; k++) {
+				if (vMemory[k] >= 0x20 && vMemory[k] <= 0x7e && k >= parameters[0] & k <= parameters[1]) {
+					printf("%c", vMemory[k]);
+				}
+				else printf(".");
+			}
+			printf("\n");
+		}
+	}
 
 }
 void deleteHistory() {
@@ -77,9 +99,10 @@ void showDir() {
 	struct stat buf;
 
 	if ((dp = opendir(".")) == NULL) {
-		printf("[Error] cannot open ..\n");
+		printf("[Error] cannot open ...\n");
 		return;
 	}
+	
 	int counter = 0;
 	while ((entry = readdir(dp)) != NULL) {
 		lstat(entry->d_name, &buf);
@@ -87,7 +110,7 @@ void showDir() {
 		if (S_ISDIR(buf.st_mode)) {
 			printf("%20s/", entry->d_name);
 		}
-		else if(S_IXUSR & buf.st_mode) {
+		else if((S_IXUSR & buf.st_mode) && strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
 			printf("%20s*", entry->d_name);
 		}
 		else {
@@ -107,11 +130,13 @@ void resetMemory() {
 }
 
 void editMemory(int parameters[]) {
-
+	vMemory[parameters[0]] = parameters[1];
 }
 
 void fillMemory(int parameters[]) {
-
+	for (int inch = parameters[0]; inch <= parameters[1]; inch++) {
+		vMemory[inch] = parameters[2];
+	}
 }
 void showMnemonic(int parameters[]) {
 
@@ -180,14 +205,15 @@ bool isExecutable(enum input_command current_command,
 		int lastIndex = strlen(parsedInstruction[1]) - 1;
 
 		if (parsedNumber == 1) {
-			start = lastAddress;
-			lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
-			parameters[0] = start, parameters[1] = lastAddress, * parsedReference = parsedNumber;
+			start = lastAddress + 1;
+			lastAddress = (start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1);
+			last = lastAddress;
+			parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;
 		}
 
 		else if (parsedNumber == 2) {
 			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
-			for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
+			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
 					STDERR_MEMORY_CORRUPT();
 					ret = false;
@@ -204,7 +230,7 @@ bool isExecutable(enum input_command current_command,
 					ret = false;
 				}
 				else {
-					last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE;
+					last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1;
 					lastAddress = last;
 				}
 			}
