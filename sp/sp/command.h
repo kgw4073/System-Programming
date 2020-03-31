@@ -6,11 +6,11 @@
 #define MAX_DUMP_BYTE 16
 #define MAX_DUMP_LINE 10
 #define WRONG_HEXA -1
-#define STDERR_ADDRESS_ERROR(); { fprintf(stderr, "정상적인 주소를 입력하세요 (0x00000 ~ 0xFFFFF)\n");}
-#define STDERR_MEMORY_CORRUPT(); { fprintf(stderr, "Memory Corruption! 정상적인 범위를 입력하세요 (0x00000 ~ 0xFFFFF)\n"); }
+#define STDERR_ADDRESS_ERROR(); { fprintf(stderr, "정상적인 주소를 입력하세요. (0x00000 ~ 0xFFFFF)\n");}
+#define STDERR_MEMORY_CORRUPT(); { fprintf(stderr, "Memory Corruption! 정상적인 범위를 입력하세요.\n"); }
 #define STDERR_VALUE_ERROR(); {	fprintf(stderr, "Value error! 정상적인 값을 입력하세요 (0x00 ~ 0xff)\n"); }
-#define STDERR_COMMAND_ERROR(); { fprintf(stderr, "Command error! 정상적인 명령어를 입력하세요. h[elp] \n"); }
-#define STDERR_OPCODE_ERROR(); { fprintf(stderr, "Operation Code error! 정상적인 명령어를 입력하세요 \n"); }
+#define STDERR_COMMAND_ERROR(); { fprintf(stderr, "Command error! 정상적인 명령어를 입력하세요. 도움이 필요하면 h[elp]를 입력하세요. \n"); }
+#define STDERR_OPCODE_ERROR(); { fprintf(stderr, "Operation Code error! 정상적인 OPCODE를 입력하세요. 도움이 필요하면 opcodelist를 입력하세요. \n"); }
 extern int parameters[3];
 
 typedef enum {
