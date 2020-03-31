@@ -27,17 +27,19 @@ void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 	command_list* new_list_node = (command_list*)malloc(sizeof(command_list));
 
 	if (head_of_command_queue == tail_of_command_queue) {
-		int len = strlen(instruction);
-		head_of_command_queue->command = (char*)malloc(len*sizeof(char));
-		strncpy(head_of_command_queue->command, instruction, len);
+		int len = (int)strlen(instruction);
+		head_of_command_queue->command = (char*)malloc((size_t)(len + 1)*sizeof(char));
+		strncpy(head_of_command_queue->command, instruction, (size_t)len);
+		head_of_command_queue->command[len] = '\0';
 		head_of_command_queue->next = new_list_node;
 		tail_of_command_queue = new_list_node;
 
 	}
 	else {
-		int len = strlen(instruction);
-		tail_of_command_queue->command = (char*)malloc(len * sizeof(char));
-		strncpy(tail_of_command_queue->command, instruction, len);
+		int len = (int)strlen(instruction);
+		tail_of_command_queue->command = (char*)malloc((size_t)(len + 1) * sizeof(char));
+		strncpy(tail_of_command_queue->command, instruction, (size_t)len);
+		tail_of_command_queue->command[len] = '\0';
 		tail_of_command_queue->next = new_list_node;
 		tail_of_command_queue = new_list_node;
 	}
@@ -59,7 +61,7 @@ void dumpMemory(int parameters[], int parsedNumber) {
 		if (i % 16 == 15) {
 			printf("; ");
 			for (int k = i / MAX_BYTES_LINE * MAX_BYTES_LINE; k < (i / MAX_BYTES_LINE + 1) * MAX_BYTES_LINE; k++) {
-				if (vMemory[k] >= 0x20 && vMemory[k] <= 0x7e && k >= parameters[0] & k <= parameters[1]) {
+				if (vMemory[k] >= 0x20 && vMemory[k] <= 0x7e && k >= parameters[0] && k <= parameters[1]) {
 					printf("%c", vMemory[k]);
 				}
 				else printf(".");
@@ -112,17 +114,23 @@ void showDir() {
 	
 	int counter = 0;
 	while ((entry = readdir(dp)) != NULL) {
+		char filename[100];
 		lstat(entry->d_name, &buf);
-		printf("   ");
+		//printf(" ");
+		strcpy(filename, entry->d_name);
+
 		if (S_ISDIR(buf.st_mode)) {
-			printf("%20s/", entry->d_name);
+			if (!strcmp(entry->d_name, "..") || !strcmp(entry->d_name, ".")) {
+				;
+			}
+			else {
+				strcat(filename, "/");
+			}
 		}
-		else if((S_IXUSR & buf.st_mode) && strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
-			printf("%20s*", entry->d_name);
+		else if((S_IXUSR & buf.st_mode)) {
+			strcat(filename, "*");
 		}
-		else {
-			printf("%20s", entry->d_name);
-		}
+		printf("%-20s", filename);
 		if (++counter % 4 == 0) {
 			printf("\n");
 		}
@@ -137,12 +145,12 @@ void resetMemory() {
 }
 
 void editMemory(int parameters[]) {
-	vMemory[parameters[0]] = parameters[1];
+	vMemory[parameters[0]] = (unsigned char)parameters[1];
 }
 
 void fillMemory(int parameters[]) {
 	for (int inch = parameters[0]; inch <= parameters[1]; inch++) {
-		vMemory[inch] = parameters[2];
+		vMemory[inch] = (unsigned char)parameters[2];
 	}
 }
 OpNode* findOpCodeNode(int OpCodeDecimal) {
@@ -243,11 +251,13 @@ RETURN_CODE isExecutable(enum input_command current_command,
 	}
 	if (current_command == dump) {
 		hexaDecimal = 0;
-		int lastIndex = strlen(parsedInstruction[1]) - 1;
+		int lastIndex = (int)strlen(parsedInstruction[1]) - 1;
 
 		if (parsedNumber == 1) {
 			start = lastAddress + 1;
+			if (start > 0xfffff) start = 0;
 			lastAddress = (start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1);
+			if (lastAddress >= 0xfffff) lastAddress = 0xfffff;
 			last = lastAddress;
 			parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;
 		}
@@ -268,6 +278,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 			}
 			else {
 				last = start + MAX_DUMP_BYTE * MAX_DUMP_LINE - 1;
+				if (last >= 0xfffff) last = 0xfffff;
 				lastAddress = last;
 			}
 
@@ -291,7 +302,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 				return COMMAND_ERROR;
 			}
 
-			lastIndex = strlen(parsedInstruction[2]) - 1;
+			lastIndex = (int)strlen(parsedInstruction[2]) - 1;
 			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
 						
@@ -322,7 +333,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		}
 		else {
 			hexaDecimal = 0;
-			int lastIndex = strlen(parsedInstruction[1]) - 1;
+			int lastIndex = (int)strlen(parsedInstruction[1]) - 1;
 			// 인자가 두 개이거나 더 이상 파싱할 필요가 없을 경우
 			if (parsedInstruction[1][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
@@ -339,7 +350,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 				return COMMAND_ERROR;
 			}
 
-			lastIndex = strlen(parsedInstruction[2]) - 1;
+			lastIndex = (int)strlen(parsedInstruction[2]) - 1;
 			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
 					return ADDRESS_INPUT_ERROR;
@@ -372,7 +383,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 				lastAddress += MAX_DUMP_BYTE * MAX_DUMP_LINE;
 
 			}
-			int lastIndex = strlen(parsedInstruction[1]) - 1;
+			int lastIndex = (int)strlen(parsedInstruction[1]) - 1;
 			if (parsedInstruction[1][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[1][i])) == WRONG_HEXA) {
@@ -387,7 +398,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 				return COMMAND_ERROR;
 			}
 
-			lastIndex = strlen(parsedInstruction[2]) - 1;
+			lastIndex = (int)strlen(parsedInstruction[2]) - 1;
 			if (parsedInstruction[2][lastIndex] == ',') {
 				for (int i = lastIndex - 1, j = 0; i >= 0; i--, j++) {
 					if ((hexaDecimal = toDecimal(parsedInstruction[2][i])) == WRONG_HEXA) {
@@ -403,7 +414,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 				return COMMAND_ERROR;
 			}
 
-			lastIndex = strlen(parsedInstruction[3]) - 1;
+			lastIndex = (int)strlen(parsedInstruction[3]) - 1;
 			for (int i = lastIndex, j = 0; i >= 0; i--, j++) {
 				if ((hexaDecimal = toDecimal(parsedInstruction[3][i])) == WRONG_HEXA) {
 					return ADDRESS_INPUT_ERROR;
@@ -428,7 +439,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 
 	else if (current_command == opcode) {
 		if (parsedNumber != 2) return false;
-		int len = (int)strlen(parsedInstruction[1]);
+		int len = (int)(int)strlen(parsedInstruction[1]);
 		int base = 1;
 		int OpCodeDecimal = 0;
 		for (int i = 0; i < len; i++) {
