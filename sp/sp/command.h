@@ -14,11 +14,16 @@
 
 typedef enum {
 	NORMAL, ADDRESS_INPUT_ERROR, MEMORY_INDEX_ERROR, VALUE_ERROR, COMMAND_ERROR, OPCODE_ERROR
+	, FILE_OPEN_ERROR, ASSEMBLE_FILE_ERROR
 } RETURN_CODE;
 
 enum input_command {
-	help, dir, quit, history, dump, edit,
-	fill, reset, opcode, opcodelist
+	h = 8, help = 289466, d = 4, dir = 12406, q = 17, quit = 358167, hi = 242,
+	history = -645956178, 
+	du = 550, dump = 290554,
+	e = 5, edit = 357713, f = 6, fill = 219264, reset = 9240392, 
+	opcode = 61500883, opcodelist = -1674749357, 
+	type = 99366, assemble = 946171891, symbol = 149475761
 };
 
 typedef struct historyNode {
@@ -41,12 +46,16 @@ extern void showHelp();
 extern void showDir();
 extern void resetMemory();
 extern void showOpcodelist();
+extern void typeFile(char parsedInstruction[][MAX_PARSED_NUM + 10]);
 
-extern void playCommand(enum input_command current_command);
+
+extern void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_command current_command);
 extern void dumpMemory(int parameters[]);
 extern void editMemory(int parameters[]);
 extern void fillMemory(int parameters[]);
 extern void showMnemonic(int parameters[]);
+
+
 
 extern RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference);
 extern bool isOverflowed(int address);

@@ -8,7 +8,7 @@
 #include <math.h>
 #include "command.h"
 #include "20150514.h"
-
+#include "assembler.h"
 int parameters[3] = { 0, };
 // 마지막 dump한 메모리 주소를 저장함. 처음에는 -1로 초기화
 int lastAddress = -1;
@@ -30,6 +30,7 @@ inline int toDecimal(char c) {
 // History 큐에 넣는 함수.
 void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 	historyNode* newHistoryNode = (historyNode*)malloc(sizeof(historyNode));
+	newHistoryNode->command = NULL;
 	// 아직 아무 것도 history에 없는 경우
 	if (headOfHistory == tailOfHistory) {
 		int len = (int)strlen(instruction);
@@ -54,16 +55,19 @@ void insertHistory(char instruction[MAX_COMMAND_SIZE]) {
 	}
 }
 
+// history queue에 할당된 메모리를 전부 해제한다.
 void deleteHistory() {
 	historyNode* temp = headOfHistory;
+	if (!temp) return;
 	if (temp->next) {
 		temp = temp->next;
-		free(headOfHistory->command);
+		if(headOfHistory->command) 
+			free(headOfHistory->command);
 		free(headOfHistory);
-		headOfHistory = temp;
 	}
 	if (temp) {
-		free(temp->command);
+		if(temp->command)
+			free(temp->command);
 		free(temp);
 	}
 }
@@ -116,7 +120,7 @@ void dumpMemory(int parameters[]) {
 void showHelp() {
 	printf("h[elp]\nd[ir]\nq[uit]\nhi[story]\n\
 du[mp][start, end]\ne[dit] address, value\nf[ill] start, end, value\n\
-reset\nopcode mnemonic\nopcodelist\n");
+reset\nopcode mnemonic\nopcodelist\nassemble filename\ntype filename\nsymbol\n");
 
 }
 
@@ -204,7 +208,6 @@ OpNode* findOpCodeNode(int OpCodeDecimal) {
 	return NULL;
 }
 
-// opcode의 코드를 반환
 // 인자 : parameters[]에는 하나의 인자만 넘어온다.
 // parameters[0]은 해당 Mnemonic을 10진수로 변환한 값이 있음.
 void showMnemonic(int parameters[]) {
@@ -242,37 +245,60 @@ void showOpcodelist() {
 	}
 }
 
+
+void typeFile(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
+	FILE* fp = fopen(parsedInstruction[1], "r");
+	if (fp == NULL) {
+		FILE_ERROR();
+		return;
+	}
+	char c;
+	while (fscanf(fp, "%c", &c) != EOF) {
+		printf("%c", c);
+	}
+
+	fclose(fp);
+}
+
+
+
+
 /* 
  * function : 정상적인 명령어가 들어와서 해당 명령어를 실행하는 함수
  * parameter :
  * 1. current_command : enum input_command로 구분돼 있음. (command.h 참조)
  */
-void playCommand(enum input_command current_command) {
+void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_command current_command) {
 	switch (current_command) {
+	case h:
 	case help:
 		showHelp();
 		break;
-
+	case d:
 	case dir:
 		showDir();
 		break;
 
+	case q:
 	case quit:
 		quit_flag = true;
 		break;
 
+	case hi:
 	case history:
 		showHistory();
 		break;
-
+	case du:
 	case dump:
 		dumpMemory(parameters);
 		break;
 
+	case e:
 	case edit:
 		editMemory(parameters);
 		break;
 
+	case f:
 	case fill:
 		fillMemory(parameters);
 		break;
@@ -287,6 +313,18 @@ void playCommand(enum input_command current_command) {
 
 	case opcodelist:
 		showOpcodelist();
+		break;
+
+	case type:
+		typeFile(parsedInstruction);
+		break;
+
+	case assemble:
+		doAssemble(parsedInstruction);
+		break;
+
+	case symbol:
+		
 		break;
 	}
 }
@@ -523,7 +561,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		int base = 1;
 		int OpCodeDecimal = 0;
 		for (int i = 0; i < len; i++) {
-			int decimal = parsedInstruction[1][i] - 'A';
+			int decimal = parsedInstruction[1][i] - 'A' + 1;
 			// decimal이 영어 대문자로 들어와야만 OpCodeDecimal을 계산.
 			if (decimal >= 0 && decimal <= 26) {
 				OpCodeDecimal += (decimal * base);
@@ -538,6 +576,18 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		parameters[0] = OpCodeDecimal;
 		return NORMAL;
 	}
+
+	else if (current_command == type || current_command == assemble) {
+		if (parsedNumber != 2) return COMMAND_ERROR;
+
+		FILE* f = fopen(parsedInstruction[1], "r");
+		if (f == NULL) {
+			return FILE_OPEN_ERROR;
+		}
+		fclose(f);
+		return NORMAL;
+	}
+
 
 	// instruction이 command 단독인 경우.
 	else {
@@ -564,7 +614,7 @@ void commandParse(char instruction[MAX_COMMAND_SIZE]) {
 	int parsed_length = 0;
 	for (int i = 0; i < MAX_COMMAND_SIZE; i++) {
 		// 공백이 들어왔는데
-		if (instruction[i] == ' ') {
+		if (instruction[i] == ' ' || instruction[i] == '\t') {
 			// 공백이 들어온 적이 없으면서 parsed instruction이 들어오고 있다면 공백 하나 넣어도 됨.
 			if (!blank_buffer && parsed_length > 0) {
 				// 
@@ -606,69 +656,19 @@ void commandParse(char instruction[MAX_COMMAND_SIZE]) {
 		}
 	}
 	// pInstruction은 parsedInstruction[0]이 나타내는 문자열의 주소.
-	char* pInstruction = &parsedInstruction[0][0];
 
+	int number;
 	// Trie에 검색하였는데 없으면 에러.
-	if (!searchTrie(root, parsedInstruction[0])) {
+	if ((number = searchTrie(root, parsedInstruction[0])) == 0) {
 		ret = COMMAND_ERROR;
 		goto ERROR_HANDLING;
 	}
 	
-	// 첫 번째 문자가 h일 때 : h[elp], hi[story] 가능
-	if (*pInstruction == 'h') {
-		// he~이거나, h로 끝나거나 이면 help
-		if (*(pInstruction + 1) == 'e' || *(pInstruction + 1) == '\0') {
-			current_command = help;
-		}
-		// hi ~이면 history이다.
-		else if (*(pInstruction + 1) == 'i') {
-			current_command = history;
-		}
-	}
-
-	// 첫 번째 문자가 d일 때 : d[ir], du[mp] 가능
-	else if (*pInstruction == 'd') {
-		if (*(pInstruction + 1) == 'i' || *(pInstruction + 1) == '\0') {
-			current_command = dir;
-		}
-		if (*(pInstruction + 1) == 'u') {
-			current_command = dump;
-		}
-	}
-
-	// qu~이면 quit
-	else if (*pInstruction == 'q' && *(pInstruction + 1) == 'u') {
-		current_command = quit;
+	current_command = number;
+	if (current_command == quit) {
 		quit_flag = true;
 	}
 
-	// e 혹은 ed~ 이면 edit
-	else if (*pInstruction == 'e') {
-		if (*(pInstruction + 1) == 'd' || *(pInstruction + 1) == '\0') {
-			current_command = edit;
-		}
-	}
-	// f 혹은 fi~ 이면 fill
-	else if (*pInstruction == 'f') {
-		if (*(pInstruction + 1) == 'i' || *(pInstruction + 1) == '\0') {
-			current_command = fill;
-		}
-	}
-
-	// re~이면 reset
-	else if (*pInstruction == 'r' && *(pInstruction + 1) == 'e') {
-		current_command = reset;
-	}
-
-	// opcode이면 opcde
-	else if (!strcmp(parsedInstruction[0], "opcode")) {
-		current_command = opcode;
-	}
-
-	// opcodelist이면 opcodelist
-	else if (!strcmp(parsedInstruction[0], "opcodelist")) {
-		current_command = opcodelist;
-	}
 	int parsedNumber = 0;
 	ret = isExecutable(current_command, parsedInstruction, &parsedNumber);
 
@@ -678,7 +678,7 @@ ERROR_HANDLING:
 	switch (ret) {
 	case NORMAL:
 		insertHistory(instruction);
-		playCommand(current_command);
+		playCommand(parsedInstruction, current_command);
 		break;
 
 	case ADDRESS_INPUT_ERROR:
@@ -700,5 +700,10 @@ ERROR_HANDLING:
 	case OPCODE_ERROR:
 		STDERR_OPCODE_ERROR();
 		break;
+
+	case FILE_OPEN_ERROR:
+		FILE_ERROR();
+		break;
 	}
+
 }

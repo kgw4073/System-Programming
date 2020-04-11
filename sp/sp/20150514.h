@@ -15,6 +15,7 @@
 // Trie 구조체
 typedef struct Trie {
 	bool terminal;
+	int number;
 	struct Trie* child[MAX_ALPHA];
 } Trie;
 
@@ -26,6 +27,9 @@ typedef struct OpNode {
 	int decimal;
 	// 실제 opcode 문자열
 	char code[20];
+
+	int format;
+
 	// hash table에서 연결 리스트를 구현하기 위함.
 	struct OpNode* next;
 } OpNode;
@@ -53,9 +57,9 @@ extern void makeHashTable();
 
 
 extern OpNode* getNewHashNode();
-extern void insertHashEntry(int OpCodeDecimal, int value, char code[]);
+extern void insertHashEntry(int OpCodeDecimal, int value, char code[], char form[]);
 extern Trie* getNewTrieNode();
 extern void deleteTrie(Trie* root);
 extern void insertTrie(Trie* root, char* key);
-extern bool searchTrie(Trie* root, char* key);
+extern int searchTrie(Trie* root, char* key);
 #endif
