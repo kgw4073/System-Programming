@@ -24,7 +24,7 @@ typedef struct OpNode {
 	// value는 실제 부여된 값.
 	int value;
 	// decimal은 opcode를 26진수로 보았을 때 가리키는 10진수 값.
-	int decimal;
+	unsigned long decimal;
 	// 실제 opcode 문자열
 	char code[20];
 
@@ -57,7 +57,8 @@ extern void makeHashTable();
 
 
 extern OpNode* getNewHashNode();
-extern void insertHashEntry(int OpCodeDecimal, int value, char code[], char form[]);
+extern void insertHashEntry(unsigned long OpCodeDecimal, int value, char code[], char form[]);
+extern OpNode* searchHashNode(char *Opcode, int length);
 extern Trie* getNewTrieNode();
 extern void deleteTrie(Trie* root);
 extern void insertTrie(Trie* root, char* key);

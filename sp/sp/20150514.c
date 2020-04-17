@@ -133,11 +133,11 @@ OpNode* getNewHashNode() {
 // OpCodeDecimal : 해당 OpCode를 26진수로 보고 이를 10진수로 바꾼 수
 // value : opcode.txt에 들어가있는, OpCode에 대응되는 값.
 // code[] : opcode 문자열.
-void insertHashEntry(int OpCodeDecimal, int value, char code[], char form[]) {
+void insertHashEntry(unsigned long OpCodeDecimal, int value, char code[], char form[]) {
 	OpNode* temp = getNewHashNode();
 	if (temp == NULL) return;
 	// opcode를 20으로 나눈 나머지가 hash table의 entry index가 된다.
-	int entryIndex = OpCodeDecimal % MAX_HASH_SIZE;
+	unsigned long entryIndex = OpCodeDecimal % MAX_HASH_SIZE;
 	hashTailPointer[entryIndex]->value = value;
 	hashTailPointer[entryIndex]->decimal = OpCodeDecimal;
 	hashTailPointer[entryIndex]->format = form[0] - '0';
@@ -184,8 +184,8 @@ void makeHashTable() {
 	// 주어진 양식대로 읽어들임. EOF가 나올 때까지.
 	while ((res = fscanf(fp, "%02X %s %s", &value, code, form)) != EOF) {
 		int len = (int)strlen(code);
-		int OpCodeDecimal = 0;
-		int base = 1;
+		unsigned long OpCodeDecimal = 0;
+		unsigned long base = 1;
 		// OpCode를 26진수로 보고 OpCodeDecimal을 계산하여 Hash Table에 삽입함.
 		for (int i = 0; i < len; i++) {
 			OpCodeDecimal += base * (code[i] - 'A' + 1);
@@ -194,6 +194,24 @@ void makeHashTable() {
 		insertHashEntry(OpCodeDecimal, value, code, form);
 	}
 	fclose(fp);
+}
+
+OpNode* searchHashNode(char* Opcode, int length) {
+	unsigned long entry = 0;
+	unsigned long base = 1;
+	for (int i = 0; i < length; i++) {
+		entry += ((Opcode[i] - 'A' + 1) * base);
+		base *= 26;
+	}
+	
+	OpNode* search = hashTable[entry % MAX_HASH_SIZE];
+	if (search->next == NULL) return NULL;
+	//search = search->next;
+	while (search != NULL) {
+		if (search->decimal == entry) return search;
+		search = search->next;
+	}
+	return NULL;
 }
 
 
@@ -213,6 +231,9 @@ void init() {
 	memcpy(vMemory, temp, sizeof(vMemory));
 	makeHashTable();
 }
+
+
+
 
 
 int main() {
