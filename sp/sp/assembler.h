@@ -42,11 +42,29 @@ typedef struct Modification {
 Modifications* ModifyRecord;
 
 
-Formats objectCode[100000];
+Formats objectCode[10000];
 
-char lst[30];
-char obj[30];
+char lstFile[30];
+char objFile[30];
 int assemble_end_line;
+
+
+extern REG findRegNumber(char str[]);
+
+extern void objectCodeWrite(int line, int loc, int parts, bool isFormat4, OpNode* search, 
+	int constant, char part1[], char part2[], char part3[], char part4[], bool labelFlag);
+
+extern bool insertBinaryTreeSymbol(Symbol* root, char symbol[20], int loc);
+extern Symbol* findBinaryTreeSymbol(Symbol* root, char symbol[20]);
+extern Symbol* getNewSymbolNode();
+
+
+extern void deleteSymbolTree(Symbol* root);
+
+
+extern void writeFiles(char lstFile[], char objFile[]);
+extern void showPassError();
+extern void reverseString(char str[]);
 
 extern bool pass1(char filename[MAX_PARSED_NUM + 10]);
 extern bool pass2(char filename[MAX_PARSED_NUM + 10]);

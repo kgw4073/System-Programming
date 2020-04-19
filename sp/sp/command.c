@@ -583,7 +583,22 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		return NORMAL;
 	}
 
-	else if (current_command == type || current_command == assemble) {
+	else if (current_command == assemble) {
+		if (parsedNumber != 2) return COMMAND_ERROR;
+
+		FILE* f = fopen(parsedInstruction[1], "r");
+		if (f == NULL) {
+			return FILE_OPEN_ERROR;
+		}
+		fclose(f);
+		int idx = (int)strlen(parsedInstruction[1]);
+		if (strcmp(parsedInstruction[1] + idx - 4, ".asm")) {
+			return ASSEMBLE_FILE_ERROR;
+		}
+		return NORMAL;
+	}
+
+	else if (current_command == type) {
 		if (parsedNumber != 2) return COMMAND_ERROR;
 
 		FILE* f = fopen(parsedInstruction[1], "r");
@@ -593,7 +608,6 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		fclose(f);
 		return NORMAL;
 	}
-
 
 	// instruction이 command 단독인 경우.
 	else {
@@ -618,6 +632,7 @@ void commandParse(char instruction[MAX_COMMAND_SIZE]) {
 	bool blank_buffer = false;
 	// parsed_length는 공백을 제거하고 남은 진짜 instruction 문자열의 length
 	int parsed_length = 0;
+	
 	for (int i = 0; i < MAX_COMMAND_SIZE; i++) {
 		// 공백이 들어왔는데
 		if (instruction[i] == ' ' || instruction[i] == '\t') {
@@ -713,14 +728,15 @@ ERROR_HANDLING:
 		break;
 
 	case OPERAND_ERROR:
-
+		STDERR_OPERAND_ERROR();
 		break;
+
 	case ASSEMBLE_FILE_ERROR:
-
+		ASSEMBLE_FILE_ERROR();
 		break;
-	case DUPLICATE_SYMBOL_ERROR:
+	default:
 
-		break;
+		OTHER_ERROR();
 	}
 
 }

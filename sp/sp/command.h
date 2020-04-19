@@ -12,11 +12,15 @@
 #define STDERR_VALUE_ERROR(); {	fprintf(stderr, "Value error! 정상적인 값을 입력하세요 (0x00 ~ 0xff)\n"); }
 #define STDERR_COMMAND_ERROR(); { fprintf(stderr, "Command error! 정상적인 명령어를 입력하세요. 도움이 필요하면 h[elp]를 입력하세요. \n"); }
 #define STDERR_OPCODE_ERROR(); { fprintf(stderr, "Operation Code error! 정상적인 OPCODE를 입력하세요. 도움이 필요하면 opcodelist를 입력하세요. \n"); }
+#define STDERR_OPERAND_ERROR(); { fprintf(stderr, "Operand Code error! 정상적인 Operand를 입력하세요 \n"); }
+#define ASSEMBLE_FILE_ERROR(); { fprintf(stderr, "해당 파일은 .asm형식이 아닙니다. \n"); }
+#define DUPLICATE_SYMBOL_ERROR(); { fprintf(stderr, "SYMBOL이 중복되었습니다. \n"); }
+#define OTHER_ERROR(); { fprintf(stderr, "에러가 발생했습니다. \n"); }
 
 typedef enum {
 	NORMAL, ADDRESS_INPUT_ERROR, MEMORY_INDEX_ERROR, VALUE_ERROR, COMMAND_ERROR, OPCODE_ERROR
 	, FILE_OPEN_ERROR, ASSEMBLE_FILE_ERROR, DUPLICATE_SYMBOL_ERROR, OPERAND_ERROR, BASE_NO_EXIST_ERROR,
-	TOO_FAR_ERROR
+	TOO_FAR_ERROR, OPERAND_NOT_FOUND_ERROR
 } RETURN_CODE;
 
 enum input_command {

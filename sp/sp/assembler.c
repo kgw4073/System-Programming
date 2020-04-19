@@ -207,7 +207,7 @@ void objectCodeWrite(int line, int loc, int parts, bool isFormat4, OpNode* searc
 			}
 		}
 		else if (parts == 4) {
-			;
+			
 		}
 		else {
 			objectCode[l].ret = OPERAND_ERROR;
@@ -341,7 +341,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 		}
 		
 		line += 5;
-		a = b = c = d = 0;
+		a = b = c = d = e = 0;
 		part1[0] = part2[0] = part3[0] = part4[0] = part5[0] = '\0';
 		idx = line / 5;
 		sscanf(lines, "%s%c%s%c%s%c%s%c%s%c", part1, &a, part2, &b, part3, &c, part4, &d, part5, &e);
@@ -356,8 +356,9 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 						errorFlag = true;
 						continue;
 					}
-					starting_address += next;
 				}
+				if (errorFlag) continue;
+				starting_address += strtol(part3, NULL, 16);
 				locctr = starting_address;
 				objectCode[idx].ret = NORMAL;
 				objectCode[idx].format = 0;
@@ -440,7 +441,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 
 
 		// 하나
-		if (a == '\n') {
+		if (b == 0) {
 			if (Label[0] != '\0') {
 				//fprintf(inter, "%d %d %d\n", OPCODE_ERROR, line, locctr);
 				objectCode[idx].ret = OPCODE_ERROR;
@@ -450,7 +451,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 			
 			search = searchHashNode(part1, (int)strlen(part1));
 			if (!search) {
-				objectCode[idx].ret = OPCODE_ERROR;
+				objectCode[idx].ret = OPERAND_NOT_FOUND_ERROR;
 				errorFlag = true;
 				continue;
 				
@@ -464,7 +465,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 
 		}
 		// 파트 두 개
-		else if (b == '\n') {
+		else if (c == 0) {
 			if (Label[0] == '\0') {
 				memcpy(Opcode, part1, sizeof(part1));
 				memcpy(Operand_first, part2, sizeof(part2));
@@ -477,7 +478,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 			if (Opcode[0] == '+') {
 				search = searchHashNode(Opcode + 1, (int)strlen(Opcode + 1));
 				if (!search) {
-					objectCode[idx].ret = OPCODE_ERROR;
+					objectCode[idx].ret = OPERAND_NOT_FOUND_ERROR;
 					errorFlag = true;
 					continue;
 					
@@ -488,7 +489,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 			else {
 				search = searchHashNode(Opcode, (int)strlen(Opcode));
 				if (!search) {
-					objectCode[idx].ret = OPCODE_ERROR;
+					objectCode[idx].ret = OPERAND_NOT_FOUND_ERROR;
 					errorFlag = true;
 					continue;
 					
@@ -512,7 +513,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 
 		}
 		// 파트 세 개
-		else if (c == '\n') {
+		else if (d == 0) {
 			if (Label[0] == '\0') {
 				memcpy(Opcode, part1, sizeof(part1));
 				memcpy(Operand_first, part2, sizeof(part2));
@@ -587,7 +588,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 					objectCodeWrite(line, locctr, 3, false, search, 1, part1, part2, part3, part4, false);
 					//printf("%-7d%04X%-7s%-7s%-7s\n", line, locctr, part1, part2, part3);
 					locctr = ProgramCounter;
-
+					
 				}
 				else if (!strcmp(part2, "RESW")) {
 					varFlag = true;
@@ -627,7 +628,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 				search = searchHashNode(Opcode, (int)strlen(Opcode));
 			}
 			if (!search) {
-				objectCode[idx].ret = OPCODE_ERROR;
+				objectCode[idx].ret = OPERAND_NOT_FOUND_ERROR;
 				errorFlag = true;
 				continue;
 			}
@@ -658,7 +659,7 @@ bool pass1(char filename[MAX_PARSED_NUM + 10]) {
 
 		}
 		// 파트 네 개
-		else if (d == '\n') {
+		else if (e == 0) {
 
 			if (Label[0] != '\0') {
 				memcpy(Opcode, part2, sizeof(part2));
@@ -726,7 +727,6 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 	bool errorFlag;
 	errorFlag = false;
 	Symbol* search;
-	showTreeSymbol(symbolRoot);
 	unsigned int obj;
 	Symbol* base = findBinaryTreeSymbol(symbolRoot, BaseSymbol);
 	if (!base) {
@@ -814,7 +814,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 					search = findBinaryTreeSymbol(symbolRoot, objectCode[i].operand_first + 1);
 					if (!search) {
 						errorFlag = true;
-						objectCode[i].ret = OPERAND_ERROR;
+						objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 						continue;
 					}
 					int target = search->loc;
@@ -845,7 +845,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 							int num = atoi(objectCode[i].operand_first + 1);
 							if (!num) {
 								errorFlag = true;
-								objectCode[i].ret = OPERAND_ERROR;
+								objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 								continue;
 							}
 							else {
@@ -877,7 +877,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 				else {
 					search = findBinaryTreeSymbol(symbolRoot, objectCode[i].operand_first);
 					if (!search) {
-						objectCode[i].ret = OPERAND_ERROR;
+						objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 						errorFlag = true;
 						continue;
 					}
@@ -907,7 +907,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 					tmp[len - 1] = '\0';
 					Symbol* search = findBinaryTreeSymbol(symbolRoot, tmp);
 					if (!search) {
-						objectCode[i].ret = OPERAND_ERROR;
+						objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 						errorFlag = true;
 						continue;
 					}
@@ -941,7 +941,9 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 				}
 
 			}
-
+			else if (objectCode[i].parts == 4) {
+				
+			}
 			//if()
 			break;
 		
@@ -951,7 +953,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 				search = findBinaryTreeSymbol(symbolRoot, objectCode[i].operand_first + 1);
 				if (!search) {
 					errorFlag = true;
-					objectCode[i].ret = OPERAND_ERROR;
+					objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 					continue;
 				}
 				int target = search->loc;
@@ -982,7 +984,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 						int num = atoi(objectCode[i].operand_first + 1);
 						if (!num) {
 							errorFlag = true;
-							objectCode[i].ret = OPERAND_ERROR;
+							objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 							continue;
 						}
 						else {
@@ -1003,7 +1005,7 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 			else {
 				search = findBinaryTreeSymbol(symbolRoot, objectCode[i].operand_first);
 				if (!search) {
-					objectCode[i].ret = OPERAND_ERROR;
+					objectCode[i].ret = OPERAND_NOT_FOUND_ERROR;
 					errorFlag = true;
 					continue;
 				}
@@ -1050,24 +1052,32 @@ bool pass2(char filename[MAX_PARSED_NUM + 10]) {
 
 
 void showPassError() {
+	if (objectCode[0].ret == BASE_NO_EXIST_ERROR) {
+		printf("Program has no base!\n");
+	}
 	for (int i = 1; i <= assemble_end_line; i++) {
 		if (objectCode[i].ret != NORMAL) {
 			printf("Line %d : ", i * 5);
 			switch (objectCode[i].ret) {
 			case OPCODE_ERROR:
-				printf("Opcode error! : ");
+				printf("Opcode error! ");
 				break;
 
 			case OPERAND_ERROR:
-				printf("Operand error! : ");
+				printf("Operand error! ");
 				break;
 
 			case DUPLICATE_SYMBOL_ERROR:
-				printf("Symbol Duplicated error! : ");
+				printf("Symbol Duplicated error! ");
 				break;
-				
+			case TOO_FAR_ERROR:
+				printf("Too Far to jump! ");
+				break;
+			case OPERAND_NOT_FOUND_ERROR:
+				printf("Symbol not exist ");
+				break;
 			default:
-				printf("Other error! : ");
+				printf("Other error! ");
 			}
 			printf("%s %s %s %s\n", objectCode[i].label, objectCode[i].opcode, 
 				objectCode[i].operand_first, objectCode[i].operand_second);
@@ -1077,8 +1087,12 @@ void showPassError() {
 
 
 
-void writeFiles(char filename[]) {
-	FILE* fp = fopen(filename, "w");
+void writeFiles(char lstFile[], char objFile[]) {
+	FILE* fp = fopen(lstFile, "w");
+	if (fp == NULL) {
+		FILE_ERROR();
+		return;
+	}
 	for (int i = 1; i <= assemble_end_line; i++) {
 		int line = i * 5;
 		Formats* forShow = &objectCode[i];
@@ -1144,18 +1158,20 @@ void writeFiles(char filename[]) {
 			}
 		}
 	}
+	fclose(fp);
 }
 void doAssemble(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
 
 
 	char temp[] = "lst";
 	char temp2[] = "obj";
-	strcpy(lst, parsedInstruction[1]);
-	strcpy(obj, lst);
-	int len = (int)strlen(lst);
-	lst[len - 3] = '\0';
-	strcat(lst, temp);
-	strcat(obj, temp2);
+	strcpy(lstFile, parsedInstruction[1]);
+	strcpy(objFile, parsedInstruction[1]);
+	int len = (int)strlen(lstFile);
+	objFile[len - 3] = '\0';
+	lstFile[len - 3] = '\0';
+	strcat(lstFile, temp);
+	strcat(objFile, temp2);
 
 	symbolRoot = getNewSymbolNode();
 
@@ -1163,7 +1179,7 @@ void doAssemble(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
 	if (pass1(parsedInstruction[1]) == false) {
 		if (pass2(parsedInstruction[1]) == false) {
 			printf("Successfullly %s %s\n", parsedInstruction[0], parsedInstruction[1]);
-			writeFiles(lst);
+			writeFiles(lstFile, objFile);
 		}
 		else {
 			showPassError();

@@ -72,6 +72,10 @@ int searchTrie(Trie* root, char* key) {
 
 	for (size_t i = 0; i < length; i++) {
 		int next = CTOI(key[i]);
+		if (next < 0 || next > 25) {
+			return 0;
+		}
+
 		if (!temp->child[next]) {
 			return false;
 		}
@@ -237,6 +241,7 @@ void init() {
 
 
 int main() {
+
 	// Trie와 Hash Table 만듦.
 	init();
 
@@ -253,7 +258,7 @@ int main() {
 		int len = (int)strlen(instruction);
 		// fgets로 받으면 마지막에 \n이 삽입되므로 이 값을 \0으로 바꿔줨.
 		instruction[len - 1] = '\0';
-		
+
 		// 들어온 instruction을 Parsing함.
 		commandParse(instruction);
 	}
