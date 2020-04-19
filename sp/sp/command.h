@@ -1,6 +1,7 @@
 ﻿#ifndef _COMMAND_H
 #define _COMMAND_H
 #include "20150514.h"
+
 #define MAX_ALPHA 26
 #define MAX_PARSED_NUM 10
 #define MAX_DUMP_BYTE 16
@@ -14,7 +15,8 @@
 
 typedef enum {
 	NORMAL, ADDRESS_INPUT_ERROR, MEMORY_INDEX_ERROR, VALUE_ERROR, COMMAND_ERROR, OPCODE_ERROR
-	, FILE_OPEN_ERROR, ASSEMBLE_FILE_ERROR, DUPLICATE_SYMBOL_ERROR, OPERAND_ERROR
+	, FILE_OPEN_ERROR, ASSEMBLE_FILE_ERROR, DUPLICATE_SYMBOL_ERROR, OPERAND_ERROR, BASE_NO_EXIST_ERROR,
+	TOO_FAR_ERROR
 } RETURN_CODE;
 
 enum input_command {
@@ -31,6 +33,11 @@ typedef struct historyNode {
 	struct historyNode* next;
 
 } historyNode;
+typedef struct Symbol {
+	char symbol[20];
+	int loc;
+	struct Symbol* left, * right;
+} Symbol;
 
 int parameters[3];
 int lastAddress;
@@ -54,6 +61,7 @@ extern void dumpMemory(int parameters[]);
 extern void editMemory(int parameters[]);
 extern void fillMemory(int parameters[]);
 extern void showMnemonic(int parameters[]);
+extern void showTreeSymbol(Symbol* root);
 
 
 

@@ -262,7 +262,13 @@ void typeFile(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
 
 
 
-
+void showTreeSymbol(Symbol* root) {
+	if (root) {
+		showTreeSymbol(root->left);
+		printf("\t%-8s%04X\n", root->symbol, root->loc);
+		showTreeSymbol(root->right);
+	}
+}
 /* 
  * function : 정상적인 명령어가 들어와서 해당 명령어를 실행하는 함수
  * parameter :
@@ -324,7 +330,7 @@ void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_comma
 		break;
 
 	case symbol:
-		
+		showTreeSymbol(symbolRoot);
 		break;
 	}
 }
@@ -701,8 +707,19 @@ ERROR_HANDLING:
 		STDERR_OPCODE_ERROR();
 		break;
 
+	
 	case FILE_OPEN_ERROR:
 		FILE_ERROR();
+		break;
+
+	case OPERAND_ERROR:
+
+		break;
+	case ASSEMBLE_FILE_ERROR:
+
+		break;
+	case DUPLICATE_SYMBOL_ERROR:
+
 		break;
 	}
 
