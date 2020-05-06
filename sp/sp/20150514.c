@@ -2,6 +2,7 @@
  *                                                               *
  * Subject : System Programming									 *	
  * Project 1 : SIC/XE Machine Shell								 *
+ * Project 2 : SIC/XE Assembler								     *  
  *																 *
  * Student ID: 20150514                                          *
  *																 *
@@ -21,7 +22,7 @@
 #include <math.h>
 #include "20150514.h"
 #include "command.h"
-
+#include "linkloader.h"
 #define CTOI(x) ((int)x-(int)'a')
 
 bool quit_flag = false;
@@ -97,12 +98,13 @@ void deleteTrie(struct Trie* root) {
 	}
 }
 void makeTrie() {
-	char basicInstruction[20][100] = {
+	char basicInstruction[24][100] = {
 "h", "help", "d", "dir", "q", "quit", "hi", "history", "du", "dump",
-"e", "edit", "f", "fill", "reset", "opcode", "opcodelist", "type", "assemble", "symbol"
+"e", "edit", "f", "fill", "reset", "opcode", "opcodelist", "type", "assemble", "symbol",
+"progaddr", "loader", "bp", "run"
 	};
 	root = getNewTrieNode();
-	for (int i = 0; i < 20; i++) {
+	for (int i = 0; i < 24; i++) {
 		insertTrie(root, basicInstruction[i]);
 	}
 
@@ -177,7 +179,7 @@ void makeHashTable() {
 		// hashTailPointer는 hash Entry에 해당하는 각각의 큐의 끝을 가리켜서, 출력 혹은 삽입할 때 사용됨.
 		hashTailPointer[i] = hashTable[i];
 	}
-	FILE* fp = fopen("./opcode.txt", "r");
+	FILE* fp = fopen("opcode.txt", "r");
 	if (fp == NULL) {
 		FILE_ERROR();
 		exit(-1);
@@ -222,7 +224,7 @@ OpNode* searchHashNode(char* Opcode, int length) {
 // 기본적인 명령어들을 바탕으로 트라이를 생성하고 history를 담기 위한 queue를 생성
 // headOfHistory와 tailOfHistory는 History queue에서 각각 head와 tail을 의미.
 void init() {
-
+	Progaddr = 0;
 	makeTrie();
 	headOfHistory = (historyNode*)malloc(sizeof(historyNode));
 	tailOfHistory = headOfHistory;
@@ -237,11 +239,7 @@ void init() {
 }
 
 
-
-
-
 int main() {
-
 	// Trie와 Hash Table 만듦.
 	init();
 

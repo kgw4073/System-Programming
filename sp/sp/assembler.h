@@ -1,17 +1,18 @@
-#ifndef _ASSEMBLER_H_
+﻿#ifndef _ASSEMBLER_H_
 #define _ASSEMBLER_H_
 #include "20150514.h"
-
 #include "command.h"
 
 typedef enum REG {
 	A, X, L, B, S, T, F, PC = 8, SW = 9
 } REG;
 
-
 Symbol* symbolRoot;
+
 extern int ProgramCounter, BaseAddress;
+
 char BaseSymbol[30];
+
 typedef struct Formats {
 
 	unsigned int op : 8;
@@ -33,42 +34,34 @@ typedef struct Formats {
 	RETURN_CODE ret;
 } Formats;
 
-typedef struct Modification {
-	int starting;
+typedef struct Modifications {
 	int loc;
-	int length;
+	struct Modifications* next;
 } Modifications;
 
-Modifications* ModifyRecord;
+Modifications* HeadModifyRecord, *TailModifyRecord;
 
-
-Formats objectCode[10000];
+Formats objectCode[1000];
 
 char lstFile[30];
 char objFile[30];
+int assemble_start_line;
 int assemble_end_line;
 
-
+extern void reverseString(char str[]);
 extern REG findRegNumber(char str[]);
 
-extern void objectCodeWrite(int line, int loc, int parts, bool isFormat4, OpNode* search, 
-	int constant, char part1[], char part2[], char part3[], char part4[], bool labelFlag);
+extern void objectCodeWrite(int line, int loc, int parts, bool isFormat4, OpNode* search, int constant, char part1[], char part2[], char part3[], char part4[], bool labelFlag);
 
-extern bool insertBinaryTreeSymbol(Symbol* root, char symbol[20], int loc);
-extern Symbol* findBinaryTreeSymbol(Symbol* root, char symbol[20]);
+extern bool insertBinaryTreeSymbol(Symbol* root, char symbol[], int loc);
+extern Symbol* findBinaryTreeSymbol(Symbol* root, char symbol[]);
 extern Symbol* getNewSymbolNode();
-
-
 extern void deleteSymbolTree(Symbol* root);
-
 
 extern void writeFiles(char lstFile[], char objFile[]);
 extern void showPassError();
-extern void reverseString(char str[]);
-
-extern bool pass1(char filename[MAX_PARSED_NUM + 10]);
-extern bool pass2(char filename[MAX_PARSED_NUM + 10]);
+extern bool pass1(char filename[]);
+extern bool pass2();
 extern void doAssemble(char parsedInstruction[][MAX_PARSED_NUM + 10]);
-
 
 #endif

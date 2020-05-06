@@ -88,20 +88,19 @@
     <RemoteCCompileToolExe>gcc</RemoteCCompileToolExe>
   </PropertyGroup>
   <ItemGroup>
+    <Text Include="opcode.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="20150514.c" />
     <ClCompile Include="assembler.c" />
     <ClCompile Include="command.c" />
+    <ClCompile Include="linkloader.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="20150514.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="20150514.h" />
     <ClInclude Include="assembler.h" />
     <ClInclude Include="command.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="opcode.txt" />
+    <ClInclude Include="linkloader.h" />
   </ItemGroup>
   <ItemDefinitionGroup />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

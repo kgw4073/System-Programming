@@ -9,6 +9,7 @@
 #include "command.h"
 #include "20150514.h"
 #include "assembler.h"
+#include "linkloader.h"
 int parameters[3] = { 0, };
 // 마지막 dump한 메모리 주소를 저장함. 처음에는 -1로 초기화
 int lastAddress = -1;
@@ -246,6 +247,12 @@ void showOpcodelist() {
 }
 
 
+/*
+	typeFile(char filename[])
+인자 : 파일명
+
+기능 : 파일 끝까지 읽어서 출력함.
+*/
 void typeFile(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
 	FILE* fp = fopen(parsedInstruction[1], "r");
 	if (fp == NULL) {
@@ -261,7 +268,7 @@ void typeFile(char parsedInstruction[][MAX_PARSED_NUM + 10]) {
 }
 
 
-
+// in-order traversal로 Binary Search Tree를 출력한다. 자동으로 정렬되어 출력된다.
 void showTreeSymbol(Symbol* root) {
 	if (root) {
 		showTreeSymbol(root->left);
@@ -269,6 +276,9 @@ void showTreeSymbol(Symbol* root) {
 		showTreeSymbol(root->right);
 	}
 }
+
+
+
 /* 
  * function : 정상적인 명령어가 들어와서 해당 명령어를 실행하는 함수
  * parameter :
@@ -332,7 +342,25 @@ void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_comma
 	case symbol:
 		showTreeSymbol(symbolRoot);
 		break;
+
+	case progaddr:
+		setProgaddr(parameters);
+		break;
+
+	case loader:
+		link_and_load(parsedInstruction);
+		break;
+
+	case bp:
+		BreakPoint(parameters, parsedInstruction[1]);
+		break;
+
+	case run:
+
+		break;
 	}
+
+	
 }
 
 /* 
@@ -344,8 +372,7 @@ void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_comma
  * 3. int* parsedReference : parsedNumber가 몇 개인지 저장하기 위해일종의 "call by reference"로 넘겨준 인자.
  */
 
-RETURN_CODE isExecutable(enum input_command current_command, 
-	char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference) {
+RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruction[][MAX_PARSED_NUM + 10], int* parsedReference) {
 
 	// start, last는 시작 주소와 끝 주소가 필요한 명령어인 경우 사용됨
 	// valueDecimal은 input으로 들어온 값을 계산할 때 사용됨
@@ -562,7 +589,7 @@ RETURN_CODE isExecutable(enum input_command current_command,
 	// command : opcode
 	// opcode mnemonic 형태로 들어옴.
 	else if (current_command == opcode) {
-		if (parsedNumber != 2) return false;
+		if (parsedNumber != 2) return COMMAND_ERROR;
 		int len = (int)strlen(parsedInstruction[1]);
 		int base = 1;
 		int OpCodeDecimal = 0;
@@ -582,15 +609,18 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		parameters[0] = OpCodeDecimal;
 		return NORMAL;
 	}
-
+	// assemble이 들어왔을 때.
 	else if (current_command == assemble) {
 		if (parsedNumber != 2) return COMMAND_ERROR;
 
+		// 해당하는 파일 이름이 있는지 판별.
 		FILE* f = fopen(parsedInstruction[1], "r");
 		if (f == NULL) {
 			return FILE_OPEN_ERROR;
 		}
 		fclose(f);
+
+		// 있으면 *.asm이 맞는지 판별.
 		int idx = (int)strlen(parsedInstruction[1]);
 		if (strcmp(parsedInstruction[1] + idx - 4, ".asm")) {
 			return ASSEMBLE_FILE_ERROR;
@@ -598,15 +628,77 @@ RETURN_CODE isExecutable(enum input_command current_command,
 		return NORMAL;
 	}
 
+	// type일 때
 	else if (current_command == type) {
 		if (parsedNumber != 2) return COMMAND_ERROR;
-
+		// 파일이 있는지 판별.
 		FILE* f = fopen(parsedInstruction[1], "r");
 		if (f == NULL) {
 			return FILE_OPEN_ERROR;
 		}
 		fclose(f);
 		return NORMAL;
+	}
+	else if (current_command == progaddr) {
+		if (parsedNumber == 1) {
+			return NORMAL;
+		}
+		else if (parsedNumber == 2) {
+			bool original_zero = true;
+			for (int i = 0; i < (int)strlen(parsedInstruction[1]); i++) {
+				if (parsedInstruction[1][i] != '0') original_zero = false;
+			}
+			if (original_zero) {
+				parameters[0] = 0;
+				return NORMAL;
+			}
+			int num = strtol(parsedInstruction[1], NULL, 16);
+			if (num == 0) {
+				return OPERAND_ERROR;
+			}
+			else {
+				parameters[0] = num;
+			}
+		}
+		else {
+			return COMMAND_ERROR;
+		}
+	}
+	else if (current_command == loader) {
+		for (int i = 1; i < parsedNumber; i++) {
+			FILE* fp = fopen(parsedInstruction[i], "r");
+			if (fp == NULL) return FILE_OPEN_ERROR;
+			fclose(fp);
+		}
+
+	}
+	else if (current_command == bp) {
+		if (parsedNumber == 1) {
+			parameters[0] = PRINT_BP_FLAG;
+		}
+		else if (parsedNumber == 2) {
+			if (!strcmp(parsedInstruction[1], "clear")) {
+				parameters[0] = CLEAR_BP_FLAG;
+			}
+			else {
+				bool original_zero = true;
+				for (int i = 0; i < (int)strlen(parsedInstruction[1]); i++) {
+					if (parsedInstruction[1][i] != '0') original_zero = false;
+				}
+				if (original_zero) {
+					parameters[0] = 0;
+					return NORMAL;
+				}
+				int num = strtol(parsedInstruction[1], NULL, 16);
+				if (num == 0) {
+					return OPERAND_ERROR;
+				}
+				else {
+					parameters[0] = num;
+				}
+			}
+		}
+		else return COMMAND_ERROR;
 	}
 
 	// instruction이 command 단독인 경우.
@@ -734,8 +826,8 @@ ERROR_HANDLING:
 	case ASSEMBLE_FILE_ERROR:
 		ASSEMBLE_FILE_ERROR();
 		break;
-	default:
 
+	default:
 		OTHER_ERROR();
 	}
 
