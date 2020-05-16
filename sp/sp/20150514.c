@@ -225,6 +225,8 @@ OpNode* searchHashNode(char* Opcode, int length) {
 // headOfHistory와 tailOfHistory는 History queue에서 각각 head와 tail을 의미.
 void init() {
 	Progaddr = 0;
+	memset(BPlist, -1, sizeof(BPlist));
+
 	makeTrie();
 	headOfHistory = (historyNode*)malloc(sizeof(historyNode));
 	tailOfHistory = headOfHistory;
