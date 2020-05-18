@@ -1,20 +1,21 @@
 #ifndef _LINK_LOADER_H_
 #define _LINK_LOADER_H_
-
+#define RELOC_ADDR CSAddr
 int Progaddr;
 int BPlist[1000];
 int sizeOfBP;
-typedef struct ExtSymbol {
-	char Symbol[100];
-	int addr;
-	struct ExtSymbol* next;
-} ExtSymbol;
+int Relocations[1000];
+
+//typedef struct ExtSymbol {
+//	char Symbol[100];
+//	int addr;
+//	struct ExtSymbol* next;
+//} ExtSymbol;
 
 typedef struct ESTab {
 	char ControlSection[100];
 	int CSAddr, length;
 	struct ESTab* left, * right;
-	ExtSymbol* front, * rear;
 } ESTab;
 
 extern ESTab* ESTabRoot;
