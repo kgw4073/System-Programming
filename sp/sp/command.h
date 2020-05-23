@@ -7,8 +7,7 @@
 #define MAX_DUMP_BYTE 16
 #define MAX_DUMP_LINE 10
 #define WRONG_HEXA -1
-#define PRINT_BP_FLAG -2
-#define CLEAR_BP_FLAG -1
+
 #define STDERR_ADDRESS_ERROR(); { fprintf(stderr, "정상적인 주소를 입력하세요. (0x00000 ~ 0xFFFFF)\n");}
 #define STDERR_MEMORY_CORRUPT(); { fprintf(stderr, "Memory Corruption! 정상적인 범위를 입력하세요.\n"); }
 #define STDERR_VALUE_ERROR(); {	fprintf(stderr, "Value error! 정상적인 값을 입력하세요 (0x00 ~ 0xff)\n"); }

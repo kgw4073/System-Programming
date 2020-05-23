@@ -234,7 +234,7 @@ void init() {
 	// debuging을 위해 임의로 메모리 초기화
 	unsigned char temp[MAX_MEMORY_LINE * MAX_BYTES_LINE];
 	for (int i = 0; i < MAX_MEMORY_LINE * MAX_BYTES_LINE; i++) {
-		temp[i] = (unsigned char)(rand() % 256);
+		temp[i] = 0;
 	}
 	memcpy(vMemory, temp, sizeof(vMemory));
 	makeHashTable();

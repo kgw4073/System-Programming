@@ -356,7 +356,7 @@ void playCommand(char parsedInstruction[][MAX_PARSED_NUM + 10], enum input_comma
 		break;
 
 	case run:
-
+		Run();
 		break;
 	}
 
@@ -389,7 +389,7 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 
 
 	// command : dump
-	if (current_command == dump) {
+	if (current_command == dump || current_command == du) {
 		hexaDecimal = 0;
 		int lastIndex = (int)strlen(parsedInstruction[1]) - 1;
 
@@ -478,8 +478,7 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 		parameters[0] = start, parameters[1] = last, * parsedReference = parsedNumber;	
 	}
 
-	// command : edit address, value
-	else if (current_command == edit) {
+	else if (current_command == edit || current_command == e) {
 		if (parsedNumber != 3) {
 			return COMMAND_ERROR;
 		}
@@ -523,9 +522,10 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 	}
 
 
+	// command : edit address, value
 	// command : fill
 	// fill은 start, end, value로 구성되어 있어야 함.
-	else if (current_command == fill) {
+	else if (current_command == fill || current_command == f) {
 		if (parsedNumber != 4) {
 			return COMMAND_ERROR;
 		}
@@ -585,7 +585,7 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 			
 		parameters[0] = start, parameters[1] = last, parameters[2] = valueDecimal;
 	}
-
+	
 	// command : opcode
 	// opcode mnemonic 형태로 들어옴.
 	else if (current_command == opcode) {
@@ -639,10 +639,15 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 		fclose(f);
 		return NORMAL;
 	}
+
+	// progaddr 설정.
 	else if (current_command == progaddr) {
+		// 두 번째 인자로 아무 것도 안 들어오면 0으로 설정
 		if (parsedNumber == 1) {
+			parameters[0] = 0;
 			return NORMAL;
 		}
+		// 두 번째 인자가 들어왔으면 숫자 파싱
 		else if (parsedNumber == 2) {
 			bool original_zero = true;
 			for (int i = 0; i < (int)strlen(parsedInstruction[1]); i++) {
@@ -670,16 +675,20 @@ RETURN_CODE isExecutable(enum input_command current_command, char parsedInstruct
 			if (fp == NULL) return FILE_OPEN_ERROR;
 			fclose(fp);
 		}
-
 	}
+
+	// break point
 	else if (current_command == bp) {
+		// bp만 들어오면 출력 Flag.
 		if (parsedNumber == 1) {
 			parameters[0] = PRINT_BP_FLAG;
 		}
 		else if (parsedNumber == 2) {
+			// bp clear면 삭제 Flag
 			if (!strcmp(parsedInstruction[1], "clear")) {
 				parameters[0] = CLEAR_BP_FLAG;
 			}
+			// break point 설정.
 			else {
 				bool original_zero = true;
 				for (int i = 0; i < (int)strlen(parsedInstruction[1]); i++) {
